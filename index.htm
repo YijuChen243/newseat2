@@ -304,7 +304,7 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-    const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyBUqcJTmApajA1-KfGT6QbXMDUuKBkBngk",
   authDomain: "newseat2-a4a11.firebaseapp.com",
   projectId: "newseat2-a4a11",
@@ -492,8 +492,19 @@
         const nameList = [];
         data.seats.forEach(sd => {
             grid.appendChild(createSeat(sd.name, sd.fixed));
-            if(sd.name) nameList.push(sd.name);
+            if(sd.name && sd.name.trim() !== "") nameList.push(sd.name.trim());
         });
+        
+        // 加入座號排序邏輯
+        nameList.sort((a, b) => {
+            const matchA = a.match(/^\d+/);
+            const matchB = b.match(/^\d+/);
+            const numA = matchA ? parseInt(matchA[0], 10) : Number.MAX_SAFE_INTEGER;
+            const numB = matchB ? parseInt(matchB[0], 10) : Number.MAX_SAFE_INTEGER;
+            if (numA !== numB) return numA - numB;
+            return a.localeCompare(b, 'zh-Hant');
+        });
+
         document.getElementById('studentList').value = nameList.join('\n');
         updateCount();
     }
@@ -810,6 +821,7 @@
     window.toggleAuthMode = () => {
         isRegisterMode = !isRegisterMode;
         document.getElementById('auth-title').innerText = isRegisterMode ? "📝 註冊系統帳號" : "🏫 座位管理系統登入";
+        document.getElementById('btn-auth-action').innerText = isRegisterMode ? "✅ 完成註冊" : "🔐 登入系統";
         document.getElementById('auth-switch-text').innerText = isRegisterMode ? "已有帳號？登入" : "註冊帳號";
     };
 

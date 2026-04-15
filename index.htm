@@ -145,6 +145,15 @@
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 12px 24px; border-radius: 10px; opacity: 0; transition: 0.3s; z-index: 9999; font-weight: 700; }
         #toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+
+        /* 成員清單美化 */
+        .admin-list { font-size: 13px; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px; max-height: 220px; overflow-y: auto; padding-right: 4px; }
+        .admin-list strong { color: #475569; display: block; margin-bottom: 10px; }
+        .admin-item { display: flex; justify-content: space-between; align-items: center; background: white; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; }
+        .admin-item:hover { border-color: #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
+        .admin-item span { font-weight: 600; color: #1e293b; }
+        .admin-item button { padding: 6px 12px; font-size: 12px; margin: 0; width: auto; background: #fee2e2; color: #dc2626; border-radius: 8px; font-weight: 700; }
+        .admin-item button:hover { background: #fecaca; }
     </style>
 </head>
 <body>
@@ -156,7 +165,10 @@
             <label>中文姓名 / 帳號</label>
             <input type="text" id="auth-username" placeholder="請輸入姓名">
             <label>密碼</label>
-            <input type="password" id="auth-password" placeholder="請輸入密碼">
+            <div style="position: relative; margin-bottom: 10px;">
+                <input type="password" id="auth-password" placeholder="請輸入密碼" style="padding-right: 40px; margin-bottom: 0;">
+                <span id="toggle-password" onclick="togglePassword()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 18px; user-select: none;" title="顯示/隱藏密碼">👁️</span>
+            </div>
         </div>
         <button class="btn-init" style="background:var(--primary); margin-top:15px;" id="btn-auth-action" onclick="handleAuth()">🔐 登入系統</button>
         <div style="margin-top:15px; font-size:14px; color:var(--primary); cursor:pointer;" onclick="toggleAuthMode()" id="auth-switch-text">註冊帳號</div>
@@ -210,15 +222,20 @@
     </div>
 
     <div class="sidebar-body">
-        <!-- 管理者功能隱藏 -->
+        <!-- 管理者功能 -->
         <div id="admin-only-section" style="display:none;">
             <div class="config-group" style="background:#f5f3ff;">
                 <h3>🛡️ 協作權限</h3>
+                <div id="main-admin-info" style="font-size:11px; color:var(--purple); margin-bottom:10px; line-height:1.4;"></div>
                 <label>選擇對象</label>
                 <select id="setup-username-select"><option value="">載入中...</option></select>
-                <button onclick="assignRole('teacher')" class="btn-init" style="background:var(--primary);">指派導師</button>
-                <label>負責班級</label>
+                <div class="btn-row">
+                    <button onclick="assignRole('admin')" class="btn-init" style="background:var(--purple); font-size:12px;">🔝 升級管理者</button>
+                    <button onclick="assignRole('teacher')" class="btn-init" style="background:var(--primary); font-size:12px;">👨‍🏫 指派導師</button>
+                </div>
+                <label style="margin-top:10px;">負責班級</label>
                 <select id="setup-class"><option value="">選擇班級</option></select>
+                <div class="admin-list" id="admin-list"><strong>成員清單：</strong><div id="member-items"></div></div>
             </div>
         </div>
 
@@ -285,7 +302,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
     const firebaseConfig = {
   apiKey: "AIzaSyBUqcJTmApajA1-KfGT6QbXMDUuKBkBngk",
@@ -295,6 +312,7 @@
   messagingSenderId: "604055111582",
   appId: "1:604055111582:web:df3fb3f4c547d7f720b88f"
 };
+
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -306,6 +324,18 @@
     const usernameToEmail = (u) => `${u.trim()}@school.local`;
     const showToast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); };
 
+    window.togglePassword = () => {
+        const pwdInput = document.getElementById('auth-password');
+        const toggleIcon = document.getElementById('toggle-password');
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            toggleIcon.textContent = '🙈';
+        } else {
+            pwdInput.type = 'password';
+            toggleIcon.textContent = '👁️';
+        }
+    };
+
     // 核心鎖定邏輯：僅鎖定導師的名單與班級名稱，解開格子數量與重置權限
     function lockTeacherPermissions() {
         const isAdmin = (currentRole === 'admin');
@@ -313,12 +343,10 @@
         const titleInput = document.getElementById('classTitle');
 
         if (!isAdmin) {
-            // 強制鎖定名單文字框
             listInput.readOnly = true;
             listInput.classList.add('locked-input');
             listInput.title = "導師權限：禁止修改原始名單";
             
-            // 鎖定班級標題
             titleInput.readOnly = true;
             titleInput.classList.add('locked-input');
             titleInput.title = "導師權限：僅能儲存被指派的班級";
@@ -362,7 +390,11 @@
                 mainAdminName = currentUsername;
             }
 
-            applyRoleUI(); refreshClassList(); initGrid();
+            applyRoleUI(); 
+            refreshClassList(); 
+            refreshMemberList(); 
+            refreshUserSelect(); 
+            initGrid();
             lockTeacherPermissions();
         } else {
             document.getElementById('auth-overlay').classList.remove('hidden');
@@ -377,6 +409,15 @@
         document.getElementById('btn-new').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('user-sub-info').innerText = isAdmin ? "" : `指派班級：${assignedClass}`;
         
+        const adminInfo = document.getElementById('main-admin-info');
+        if (adminInfo) {
+            if(isAdmin && mainAdminUID !== currentUser.uid) {
+                adminInfo.innerText = `🔗 協作模式：編輯 ${mainAdminName} 的班級資料`;
+            } else if(isAdmin) {
+                adminInfo.innerText = `🏠 主管理者：個人資料庫`;
+            }
+        }
+        
         // 顯示管理者專屬按鈕
         document.getElementById('btn-batch-pdf').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('btn-status').style.display = isAdmin ? 'block' : 'none';
@@ -388,6 +429,54 @@
             syncTitle();
         }
     }
+
+    async function refreshUserSelect() {
+        if(currentRole !== 'admin') return;
+        const select = document.getElementById('setup-username-select');
+        select.innerHTML = '<option value="">-- 選擇註冊成員 --</option>';
+        const snap = await getDocs(collection(db, 'usernames'));
+        snap.forEach(d => {
+            const opt = document.createElement('option'); opt.value = d.data().displayName; opt.innerText = d.data().displayName; select.appendChild(opt);
+        });
+    }
+
+    async function refreshMemberList() {
+        if(currentRole !== 'admin') return;
+        const items = document.getElementById('member-items');
+        if(!items) return;
+        items.innerHTML = "載入中...";
+        const snap = await getDocs(collection(db, 'roles'));
+        items.innerHTML = "";
+        snap.forEach(async d => {
+            if(d.id === currentUser.email) return;
+            const uDoc = await getDoc(doc(db, 'usernames', d.id));
+            const name = uDoc.exists() ? uDoc.data().displayName : d.id;
+            const data = d.data();
+            const div = document.createElement('div'); div.className = 'admin-item';
+            div.innerHTML = `<span>${name} (${data.role === 'admin' ? '管理者' : '導師：' + (data.class || '無')})</span>
+                <button onclick="removeMember('${d.id}')">刪除</button>`;
+            items.appendChild(div);
+        });
+    }
+
+    window.removeMember = async (email) => { 
+        if(confirm('確定要移除此成員的所有權限與註冊資料嗎？\n(移除後將從下拉選單中完全消失)')) { 
+            await deleteDoc(doc(db, 'roles', email)); 
+            await deleteDoc(doc(db, 'usernames', email));
+            refreshMemberList(); 
+            refreshUserSelect();
+        } 
+    }
+
+    window.assignRole = async (roleType) => {
+        const n = document.getElementById('setup-username-select').value;
+        const c = document.getElementById('setup-class').value;
+        if(!n) return alert('請選擇對象');
+        const e = usernameToEmail(n);
+        await setDoc(doc(db, 'roles', e), { role: roleType, class: roleType === 'teacher' ? c : '', sharedWith: mainAdminUID }, { merge: true });
+        showToast(`已指派 ${n} 為 ${roleType === 'admin' ? '管理者' : '導師'}`); 
+        refreshMemberList();
+    };
 
     function renderClassToDOM(title, data) {
         document.getElementById('cols').value = data.cols;

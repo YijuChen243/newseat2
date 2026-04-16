@@ -17,9 +17,9 @@ import {
   collection, 
   onSnapshot 
 } from 'firebase/firestore';
-import { Eye, EyeOff, LogOut, Save, FolderOpen, Shuffle, Camera, Trash2, Lock, Unlock, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, LogOut, Save, FolderOpen, Shuffle, Camera, Lock, Unlock, RotateCcw } from 'lucide-react';
 
-// --- Firebase Configuration ---
+// --- Firebase 配置 ---
 const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -36,7 +36,7 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // App State
+  // 應用程式狀態
   const [classTitle, setClassTitle] = useState('113學年度 資二甲 座位表');
   const [cols, setCols] = useState(6);
   const [rows, setRows] = useState(5);
@@ -51,7 +51,7 @@ export default function App() {
   const captureRef = useRef(null);
   const [draggedIdx, setDraggedIdx] = useState(null);
 
-  // --- HTML2Canvas Dynamic Loader ---
+  // --- 動態載入 HTML2Canvas ---
   const getHtml2Canvas = () => {
     return new Promise((resolve) => {
       if (window.html2canvas) {
@@ -65,7 +65,7 @@ export default function App() {
     });
   };
 
-  // --- Auth Effect ---
+  // --- 身分驗證 Effect ---
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -83,7 +83,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- Data Fetching ---
+  // --- 資料同步 Effect ---
   useEffect(() => {
     if (!user) return;
     const q = collection(db, 'artifacts', appId, 'users', user.uid, 'classes');
@@ -95,7 +95,7 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // --- Grid Init ---
+  // --- 網格初始化 Effect ---
   useEffect(() => {
     const count = cols * rows;
     setLayout(prev => {
@@ -106,7 +106,7 @@ export default function App() {
     });
   }, [cols, rows]);
 
-  // --- Auth Handlers ---
+  // --- 登入/註冊處理 ---
   const handleAuth = async () => {
     if (!email || !password) return;
     setLoading(true);
@@ -123,7 +123,7 @@ export default function App() {
     }
   };
 
-  // --- Action Handlers ---
+  // --- 功能操作 ---
   const handleShuffle = () => {
     const students = studentListRaw.split('\n')
       .filter(line => line.trim())
@@ -205,7 +205,7 @@ export default function App() {
     setLoading(false);
   };
 
-  // --- Drag & Drop Handlers ---
+  // --- 拖曳邏輯 ---
   const handleDragStart = (idx) => {
     setDraggedIdx(idx);
   };
@@ -223,7 +223,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="fixed inset-0 bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl font-sans">
           <h2 className="text-2xl font-bold text-center mb-6 text-slate-800">
             {authMode === 'login' ? '導師管理系統登入' : '註冊新帳號'}
           </h2>
@@ -243,7 +243,7 @@ export default function App() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            <button onClick={handleAuth} disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">
+            <button onClick={handleAuth} disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition">
               {loading ? '處理中...' : (authMode === 'login' ? '登入' : '註冊')}
             </button>
             <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-blue-600 text-sm font-semibold mt-2">
@@ -256,53 +256,53 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans">
-      {/* Sidebar */}
-      <aside className="w-[380px] bg-white border-r shadow-lg overflow-y-auto flex flex-col no-print">
-        <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
+    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
+      {/* 側邊欄控制區 */}
+      <aside className="w-[360px] bg-white border-r shadow-lg overflow-y-auto flex flex-col no-print z-10">
+        <div className="p-4 bg-slate-800 text-white flex justify-between items-center sticky top-0 z-20">
           <div>
             <h1 className="text-lg font-bold">座位安排系統</h1>
-            <p className="text-[10px] text-slate-400 truncate w-40">{user.email || '匿名用戶'}</p>
+            <p className="text-[10px] text-slate-400 truncate w-40">{user.email}</p>
           </div>
-          <button onClick={() => signOut(auth)} className="p-2 hover:bg-slate-700 rounded-full"><LogOut size={18} /></button>
+          <button onClick={() => signOut(auth)} className="p-2 hover:bg-slate-700 rounded-full transition"><LogOut size={18} /></button>
         </div>
 
-        <div className="p-4 space-y-4">
-          {/* Cloud Storage */}
-          <div className="bg-slate-50 p-3 rounded-xl border space-y-2">
+        <div className="p-4 space-y-5">
+          {/* 雲端存取 */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
             <h3 className="font-bold text-xs flex items-center gap-2"><FolderOpen size={14}/> 存取班級</h3>
             <select className="w-full p-1.5 border rounded-md text-xs" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
               <option value="">-- 選擇已存班級 --</option>
               {savedClasses.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
             </select>
             <div className="flex gap-2">
-              <button onClick={loadFromCloud} className="flex-1 bg-green-600 text-white py-1.5 rounded-md text-xs font-bold">載入</button>
-              <button onClick={saveToCloud} className="flex-1 bg-violet-600 text-white py-1.5 rounded-md text-xs font-bold flex items-center justify-center gap-1"><Save size={14}/>儲存</button>
+              <button onClick={loadFromCloud} className="flex-1 bg-green-600 text-white py-1.5 rounded-md text-xs font-bold hover:bg-green-700">載入</button>
+              <button onClick={saveToCloud} className="flex-1 bg-violet-600 text-white py-1.5 rounded-md text-xs font-bold flex items-center justify-center gap-1 hover:bg-violet-700"><Save size={14}/>儲存</button>
             </div>
           </div>
 
-          {/* Layout & List */}
+          {/* 佈局與名單 */}
           <div className="space-y-3">
             <h3 className="font-bold border-b pb-1 text-slate-700 text-xs">佈局與名單</h3>
             <input type="text" className="w-full p-2 border rounded text-xs" placeholder="班級全稱" value={classTitle} onChange={e => setClassTitle(e.target.value)} />
             <div className="flex gap-4">
-              <div className="flex-1"><label className="text-[10px] block text-gray-500">欄數 (寬)</label><input type="number" className="w-full p-1.5 border rounded text-center text-xs" value={cols} onChange={e => setCols(Math.max(1, parseInt(e.target.value)||1))} /></div>
-              <div className="flex-1"><label className="text-[10px] block text-gray-500">列數 (深)</label><input type="number" className="w-full p-1.5 border rounded text-center text-xs" value={rows} onChange={e => setRows(Math.max(1, parseInt(e.target.value)||1))} /></div>
+              <div className="flex-1"><label className="text-[10px] block text-gray-500 mb-1">欄數 (寬)</label><input type="number" className="w-full p-1.5 border rounded text-center text-xs" value={cols} onChange={e => setCols(Math.max(1, parseInt(e.target.value)||1))} /></div>
+              <div className="flex-1"><label className="text-[10px] block text-gray-500 mb-1">列數 (深)</label><input type="number" className="w-full p-1.5 border rounded text-center text-xs" value={rows} onChange={e => setRows(Math.max(1, parseInt(e.target.value)||1))} /></div>
             </div>
-            <textarea className="w-full p-2 border rounded text-[10px] h-28 leading-tight" placeholder="座號 姓名 (一行一個，例：01 王小明)" value={studentListRaw} onChange={e => setStudentListRaw(e.target.value)} />
-            <button onClick={handleShuffle} className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-sm">
+            <textarea className="w-full p-2 border rounded text-[10px] h-32 leading-tight" placeholder="座號 姓名 (一行一個)" value={studentListRaw} onChange={e => setStudentListRaw(e.target.value)} />
+            <button onClick={handleShuffle} className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-sm transition">
               <Shuffle size={16}/> 隨機排位 (保留鎖定)
             </button>
           </div>
 
-          {/* Officers */}
+          {/* 幹部名單 */}
           <div className="space-y-2">
-            <h3 className="font-bold text-xs text-slate-700 flex items-center gap-1">幹部名單</h3>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            <h3 className="font-bold text-xs text-slate-700">幹部名單編輯</h3>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-2">
               {OFFICERS.map((title, i) => (
-                <div key={i} className="flex flex-col">
+                <div key={i}>
                   <span className="text-[9px] text-gray-400 ml-1">{title}</span>
-                  <input type="text" className="w-full p-1 border rounded text-xs" placeholder={title} value={officers[i]} onChange={e => {
+                  <input type="text" className="w-full p-1 border rounded text-xs" value={officers[i]} onChange={e => {
                     const n = [...officers]; n[i] = e.target.value; setOfficers(n);
                   }}/>
                 </div>
@@ -310,34 +310,34 @@ export default function App() {
             </div>
           </div>
 
-          {/* Memo */}
+          {/* 備註 */}
           <div className="space-y-1">
             <h3 className="font-bold text-xs text-slate-700">備註事項</h3>
-            <textarea className="w-full p-2 border rounded text-xs h-20" placeholder="輸入導師姓名或其他說明..." value={memo} onChange={e => setMemo(e.target.value)} />
+            <textarea className="w-full p-2 border rounded text-xs h-24" placeholder="輸入說明..." value={memo} onChange={e => setMemo(e.target.value)} />
           </div>
 
-          <div className="space-y-2 pt-2">
-            <button onClick={exportImage} disabled={loading} className="w-full bg-amber-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-amber-600 disabled:opacity-50 text-sm">
+          <div className="space-y-2 pt-2 pb-6">
+            <button onClick={exportImage} disabled={loading} className="w-full bg-amber-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-amber-600 disabled:opacity-50 text-sm shadow transition">
               <Camera size={18}/> {loading ? '處理中...' : '匯出圖片 (PNG)'}
             </button>
-            <button onClick={resetAll} className="w-full bg-red-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 text-sm">
+            <button onClick={resetAll} className="w-full bg-red-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 text-sm transition">
               <RotateCcw size={16}/> 重設所有欄位
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main Preview (A4 Paper) */}
+      {/* 預覽區 (A4 紙張規格) */}
       <main className="flex-1 overflow-auto bg-slate-500 p-8 flex justify-center">
-        <div ref={captureRef} className="w-[800px] min-h-[1131px] bg-white shadow-2xl p-[40px] flex flex-col relative text-black">
-          <h1 className="text-center text-4xl font-extrabold pb-3 mb-6 border-b-[3px] border-black tracking-widest">{classTitle}</h1>
+        <div ref={captureRef} className="w-[800px] min-h-[1131px] bg-white shadow-2xl p-[45px] flex flex-col relative text-black font-sans">
+          <h1 className="text-center text-4xl font-extrabold pb-3 mb-8 border-b-[3px] border-black tracking-[0.2em]">{classTitle}</h1>
           
-          <div className="flex justify-center mb-6">
-            <div className="w-56 h-12 border-2 border-black flex items-center justify-center font-bold text-lg bg-slate-50">講　桌</div>
+          <div className="flex justify-center mb-8">
+            <div className="w-56 h-12 border-2 border-black flex items-center justify-center font-bold text-xl bg-slate-50 shadow-sm">講　桌</div>
           </div>
           
           <div className="flex flex-1 gap-6 min-h-0">
-            {/* Seating Grid */}
+            {/* 座位區 */}
             <div className="flex-1 grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, alignContent: 'start' }}>
               {layout.map((seat, i) => (
                 <div 
@@ -346,12 +346,12 @@ export default function App() {
                   onDragStart={() => handleDragStart(i)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => handleDrop(i)}
-                  className={`border-[1.5px] border-black flex flex-col cursor-move relative group transition-colors ${seat.fixed ? 'bg-yellow-50' : 'bg-white'} ${draggedIdx === i ? 'opacity-30' : ''} hover:border-blue-500 hover:z-10`} 
+                  className={`border-[1.5px] border-black flex flex-col relative group transition-all duration-200 ${seat.fixed ? 'bg-yellow-50' : 'bg-white'} ${draggedIdx === i ? 'opacity-30' : ''} ${seat.name ? 'cursor-move' : ''} hover:border-blue-500 hover:shadow-md`} 
                   style={{ aspectRatio: '1/0.85' }} 
                   onClick={() => setEditingSeat({ idx: i, ...seat })}
                 >
-                  <div className="h-1/3 border-b border-black flex items-center justify-center text-[10px] font-bold bg-slate-50">{seat.no}</div>
-                  <div className="flex-1 flex items-center justify-center text-lg font-bold truncate px-1">{seat.name}</div>
+                  <div className="h-[25%] border-b border-black flex items-center justify-center text-[10px] font-bold bg-slate-50">{seat.no}</div>
+                  <div className="flex-1 flex items-center justify-center text-xl font-bold truncate px-1">{seat.name}</div>
                   <div className="absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print">
                     <button onClick={(e) => {
                       e.stopPropagation();
@@ -364,29 +364,31 @@ export default function App() {
               ))}
             </div>
 
-            {/* Side List */}
+            {/* 右側名單對照 */}
             <div className="w-24 border-2 border-black flex flex-col overflow-hidden self-start">
-              <div className="bg-black text-white text-center py-1 font-bold text-[10px]">座號名單</div>
+              <div className="bg-black text-white text-center py-1 font-bold text-[10px] tracking-widest">座號名單</div>
               <div className="p-1 text-[9px] leading-tight font-medium bg-white">
-                {studentListRaw.split('\n').filter(l => l.trim()).map((l, i) => <div key={i} className="border-b border-slate-100 py-0.5 truncate">{l}</div>)}
+                {studentListRaw.split('\n').filter(l => l.trim()).map((l, i) => (
+                   <div key={i} className="border-b border-slate-100 py-0.5 truncate">{l}</div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Bottom Area: Officers & Memo */}
+          {/* 底部區：依照使用者要求顯示幹部與備註 */}
           <div className="mt-8 space-y-4">
-            {/* Officers Table - Moved here per request */}
+            {/* 幹部表區塊 (移動至座位正下方) */}
             <div className="grid grid-cols-6 border-t-2 border-l-2 border-black">
               {OFFICERS.map((title, i) => (
-                <div key={i} className="border-r-2 border-b-2 border-black p-1 text-center min-h-[40px] flex flex-col justify-center">
-                  <div className="text-[9px] font-bold text-gray-500">{title}</div>
+                <div key={i} className="border-r-2 border-b-2 border-black p-1 text-center min-h-[42px] flex flex-col justify-center bg-white">
+                  <div className="text-[9px] font-bold text-gray-500 mb-0.5">{title}</div>
                   <div className="text-sm font-bold truncate leading-tight">{officers[i]}</div>
                 </div>
               ))}
             </div>
 
-            {/* Memo Box */}
-            <div className="border-2 border-black p-4 min-h-[120px] text-sm whitespace-pre-wrap relative bg-white">
+            {/* 備註區塊 */}
+            <div className="border-2 border-black p-5 min-h-[140px] text-base whitespace-pre-wrap relative bg-white">
                <span className="absolute -top-3 left-3 bg-white px-2 text-[10px] font-bold uppercase tracking-widest border border-black">備註事項 / 導師說明</span>
                {memo || ""}
             </div>
@@ -394,31 +396,31 @@ export default function App() {
         </div>
       </main>
 
-      {/* Seat Editor Modal */}
+      {/* 座位編輯 Modal */}
       {editingSeat && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs space-y-4">
-            <h3 className="font-bold border-b pb-2 flex justify-between">編輯座位 <span>#{editingSeat.idx + 1}</span></h3>
-            <div className="space-y-3">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs space-y-4 animate-in fade-in zoom-in duration-200">
+            <h3 className="font-bold border-b pb-2 flex justify-between text-slate-800">編輯座位 <span>#{editingSeat.idx + 1}</span></h3>
+            <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-400 block mb-1">座號</label>
-                <input type="text" className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例如: 01" value={editingSeat.no} onChange={e => setEditingSeat({...editingSeat, no: e.target.value})} />
+                <input type="text" className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={editingSeat.no} onChange={e => setEditingSeat({...editingSeat, no: e.target.value})} />
               </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-400 block mb-1">姓名</label>
-                <input type="text" className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="學生姓名" value={editingSeat.name} onChange={e => setEditingSeat({...editingSeat, name: e.target.value})} />
+                <input type="text" className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={editingSeat.name} onChange={e => setEditingSeat({...editingSeat, name: e.target.value})} />
               </div>
               <div className="flex items-center gap-2 text-sm pt-2">
-                <input type="checkbox" id="f" className="w-4 h-4" checked={editingSeat.fixed} onChange={e => setEditingSeat({...editingSeat, fixed: e.target.checked})} />
-                <label htmlFor="f" className="font-medium">鎖定位置 (隨機排位時不動)</label>
+                <input type="checkbox" id="fixed-check" className="w-4 h-4 cursor-pointer" checked={editingSeat.fixed} onChange={e => setEditingSeat({...editingSeat, fixed: e.target.checked})} />
+                <label htmlFor="fixed-check" className="font-medium cursor-pointer">鎖定位置 (隨機時保持不動)</label>
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button onClick={() => setEditingSeat(null)} className="flex-1 py-2 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200">取消</button>
+              <button onClick={() => setEditingSeat(null)} className="flex-1 py-2 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200 transition">取消</button>
               <button onClick={() => {
                 const n = [...layout]; n[editingSeat.idx] = { no: editingSeat.no, name: editingSeat.name, fixed: editingSeat.fixed };
                 setLayout(n); setEditingSeat(null);
-              }} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700">儲存</button>
+              }} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">儲存</button>
             </div>
           </div>
         </div>
@@ -431,6 +433,7 @@ export default function App() {
         ::-webkit-scrollbar-track { background: transparent; }
         .cursor-move { cursor: grab; }
         .cursor-move:active { cursor: grabbing; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       `}</style>
     </div>
   );

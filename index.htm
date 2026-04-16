@@ -1,357 +1,859 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>導師班級座任安排系統</title>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <style>
-        :root { 
-            --fixed: #fff9db; --primary: #228be6; --bg: #f8f9fa; --success: #40c057; 
-            --warning: #ff922b; --purple: #7950f2; --a4-width: 800px; --a4-height: 1132px;
-        }
-        
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* 側邊欄 */
-        .sidebar { width: 380px; background: white; padding: 20px; box-shadow: 2px 0 15px rgba(0,0,0,0.1); overflow-y: auto; display: flex; flex-direction: column; z-index: 5; }
-        .config-group { margin-bottom: 15px; padding: 12px; border-radius: 10px; background: #f1f3f5; border: 1px solid #dee2e6; }
-        h3 { margin-top: 0; font-size: 16px; color: #212529; border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 12px; }
-        
-        label { font-weight: bold; display: block; margin-bottom: 5px; color: #495057; font-size: 14px; }
-        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; }
-        
-        button { width: 100%; padding: 12px; margin-bottom: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        button:hover { opacity: 0.85; }
-        
-        .btn-new { background: #fa5252; color: white; }
-        .btn-cloud { background: var(--purple); color: white; }
-        .btn-load { background: var(--success); color: white; }
-        .btn-shuffle { background: var(--primary); color: white; font-size: 18px; margin: 10px 0; }
-        .btn-img { background: var(--warning); color: white; }
-        .btn-out { background: #adb5bd; color: white; margin-top: auto; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>導師班級座位系統</title>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+  :root {
+    --fixed: #fff9db;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --bg: #f0f2f5;
+    --success: #16a34a;
+    --warning: #d97706;
+    --purple: #7c3aed;
+    --danger: #dc2626;
+    --sidebar-w: 360px;
+    --radius: 10px;
+  }
 
-        /* 主畫面 */
-        .main-content { flex-grow: 1; display: flex; justify-content: center; overflow: auto; padding: 20px; background: #525659; }
-        #capture-area { width: var(--a4-width); height: var(--a4-height); background: white; padding: 30px 40px; display: flex; flex-direction: column; box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        #class-title-display { text-align: center; font-size: 1.8rem; margin: 0 0 10px 0; font-weight: 900; }
-        .teacher-area { display: flex; justify-content: center; margin-bottom: 20px; }
-        .teacher-desk { width: 220px; height: 50px; background: linear-gradient(to bottom, #8b4513, #a0522d); border: 2px solid #5d2e0a; border-radius: 8px; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+  body {
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+    background: var(--bg);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
 
-        .classroom-layout { display: flex; flex-grow: 1; gap: 15px; max-height: 650px; }
-        .grid-container { flex: 0 0 82%; }
-        .grid { display: grid; gap: 8px; }
-        
-        .seat { aspect-ratio: 4 / 3.5; border: 1.5px solid #000; border-radius: 4px; display: flex; flex-direction: column; cursor: pointer; background: #fff; overflow: hidden; }
-        .seat.is-fixed { background: var(--fixed); }
-        .seat-no-row { height: 35%; background: #f1f3f5; border-bottom: 1px solid #000; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; }
-        .seat-name-row { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; }
+  /* ── 登入畫面 ── */
+  #auth-overlay {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    transition: opacity .3s;
+  }
+  #auth-overlay.hidden { display: none; }
 
-        .attendance-list { flex: 0 0 18%; border: 1.5px solid #000; padding: 5px; font-size: 11px; }
-        .attendance-header { text-align: center; font-weight: bold; border-bottom: 1.5px solid #000; margin-bottom: 5px; }
+  .auth-card {
+    background: white;
+    border-radius: 20px;
+    padding: 44px 40px 36px;
+    width: 420px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.4);
+  }
+  .auth-logo {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .auth-logo h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.5px;
+  }
+  .auth-logo p { font-size: 13px; color: #64748b; margin-top: 4px; }
 
-        .officer-section { margin-top: 15px; border: 1.5px solid #000; padding: 8px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
-        .officer-box { border: 1px dashed #adb5bd; padding: 4px; text-align: center; font-size: 11px; height: 40px; }
-        .info-footer { margin-top: 10px; height: 90px; border: 1.5px solid #000; padding: 10px; font-size: 13px; }
+  .field-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .field-wrap input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-family: inherit;
+    background: #f8fafc;
+    color: #1e293b;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .field-wrap input:focus { border-color: var(--primary); background: white; }
+  .eye-toggle {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    user-select: none;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 4px;
+    background: none;
+    border: none;
+  }
+  .eye-toggle:hover { background: #f1f5f9; }
 
-        /* 登入介面 */
-        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        #auth-overlay.hidden { display: none; }
-        .auth-box { background: white; padding: 40px; border-radius: 20px; width: 400px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
-        .auth-input-group { position: relative; width: 100%; margin-bottom: 15px; }
-        .auth-input { background: #f1f3f5; border: none; border-radius: 8px; padding: 15px; font-size: 16px; width: 100%; box-sizing: border-box; }
-        .eye-btn { position: absolute; right: 15px; top: 15px; cursor: pointer; font-size: 20px; user-select: none; z-index: 10; padding: 0 5px; }
-        .auth-main-btn { background: var(--primary); color: white; height: 55px; font-size: 18px; margin-top: 10px; }
-        .auth-switch { text-align: center; margin-top: 20px; color: var(--primary); text-decoration: underline; cursor: pointer; font-size: 14px; }
-    </style>
+  .auth-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background .2s;
+  }
+  .auth-btn:hover { background: var(--primary-dark); }
+  .auth-btn:active { transform: scale(0.99); }
+
+  .auth-switch {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 13px;
+    color: #64748b;
+  }
+  .auth-switch a {
+    color: var(--primary);
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  /* ── 側邊欄 ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #1e293b;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-header h2 { font-size: 16px; font-weight: 700; }
+  .sidebar-header span { font-size: 12px; color: #94a3b8; }
+
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  label { font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: white;
+    color: #1e293b;
+    outline: none;
+    margin-bottom: 10px;
+    transition: border-color .2s;
+  }
+  input[type=text]:focus, input[type=number]:focus, textarea:focus, select:focus {
+    border-color: var(--primary);
+  }
+  textarea { resize: vertical; }
+
+  .btn {
+    width: 100%;
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all .15s;
+    margin-bottom: 7px;
+    background: white;
+    color: #374151;
+  }
+  .btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+  .btn:active { transform: scale(0.99); }
+  .btn-primary  { background: var(--primary); color: white; border-color: var(--primary-dark); }
+  .btn-primary:hover  { background: var(--primary-dark); }
+  .btn-success  { background: var(--success); color: white; border-color: #15803d; }
+  .btn-success:hover  { background: #15803d; }
+  .btn-danger   { background: var(--danger); color: white; border-color: #b91c1c; }
+  .btn-danger:hover   { background: #b91c1c; }
+  .btn-warning  { background: var(--warning); color: white; border-color: #b45309; }
+  .btn-warning:hover  { background: #b45309; }
+  .btn-purple   { background: var(--purple); color: white; border-color: #6d28d9; }
+  .btn-purple:hover   { background: #6d28d9; }
+  .btn-lg { font-size: 16px; padding: 12px 14px; margin-top: 4px; }
+  .btn-sm { font-size: 12px; padding: 7px 10px; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 7px; }
+  .btn-row .btn { margin-bottom: 0; }
+
+  .officer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .officer-grid input { margin-bottom: 0; font-size: 12px; }
+  .officer-item label { font-size: 10px; margin-bottom: 2px; }
+
+  .sidebar-footer {
+    padding: 12px 14px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  /* ── 主畫面 ── */
+  .main {
+    flex: 1;
+    overflow: auto;
+    background: #525659;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ── A4 列印區 ── */
+  #capture-area {
+    width: 800px;
+    min-width: 800px;
+    background: white;
+    padding: 30px 38px 24px;
+    display: flex;
+    flex-direction: column;
+    color: #212529;
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+  }
+
+  #display-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    color: #212529;
+  }
+
+  .teacher-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .teacher-desk {
+    width: 220px;
+    height: 48px;
+    background: linear-gradient(to bottom, #8b4513, #a0522d);
+    border: 2px solid #5d2e0a;
+    border-radius: 8px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 15px;
+    letter-spacing: 2px;
+  }
+
+  .classroom-body { display: flex; gap: 14px; flex: 1; }
+  #grid { display: grid; gap: 8px; flex: 1; }
+
+  .seat {
+    border: 1.5px solid #333;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    background: white;
+    overflow: hidden;
+    aspect-ratio: 4 / 3.5;
+    transition: box-shadow .15s;
+  }
+  .seat:hover { box-shadow: 0 0 0 2px var(--primary); }
+  .seat.is-fixed { background: var(--fixed); }
+  .seat-no {
+    height: 34%;
+    background: #f1f3f5;
+    border-bottom: 1.5px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
+  }
+  .seat-name {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #212529;
+  }
+
+  .attendance-col {
+    width: 108px;
+    min-width: 108px;
+    border: 1.5px solid #333;
+    padding: 5px;
+    font-size: 11px;
+    color: #212529;
+    overflow: hidden;
+  }
+  .att-header {
+    text-align: center;
+    font-weight: 700;
+    border-bottom: 1.5px solid #333;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .att-item { border-bottom: 1px solid #ddd; padding: 1px 0; font-size: 11px; }
+
+  .officers-bar {
+    margin-top: 12px;
+    border: 1.5px solid #333;
+    padding: 7px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px;
+  }
+  .off-box {
+    border: 1px dashed #aaa;
+    padding: 4px;
+    text-align: center;
+    min-height: 38px;
+    font-size: 10px;
+    color: #212529;
+  }
+  .off-box-title {
+    font-weight: 700;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 2px;
+    font-size: 10px;
+  }
+  .off-box-name { font-size: 11px; }
+
+  .info-footer {
+    margin-top: 10px;
+    border: 1.5px solid #333;
+    padding: 10px;
+    min-height: 72px;
+    font-size: 13px;
+    color: #212529;
+    white-space: pre-wrap;
+  }
+
+  /* ── 彈窗 ── */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-bg.hidden { display: none; }
+  .modal-box {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    width: 300px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.2);
+  }
+  .modal-box h4 { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: #1e293b; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+  .modal-btns .btn { margin-bottom: 0; flex: 1; }
+
+  /* scrollbar */
+  .sidebar-body::-webkit-scrollbar { width: 5px; }
+  .sidebar-body::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+</style>
 </head>
 <body>
 
+<!-- 登入 -->
 <div id="auth-overlay">
-    <div class="auth-box">
-        <h2 id="auth-title" style="text-align: center; margin-bottom: 30px;">導師班級管理系統</h2>
-        <div class="auth-input-group">
-            <input type="email" id="auth-email" class="auth-input" placeholder="電子信箱 (例如: a@gmail.com)">
-        </div>
-        <div class="auth-input-group">
-            <input type="password" id="auth-password" class="auth-input" placeholder="密碼">
-            <span class="eye-btn" id="eye-icon">👁️</span>
-        </div>
-        <button id="btn-auth-action" class="auth-main-btn">進入系統</button>
-        <div id="btn-switch-mode" class="auth-switch">註冊新帳號</div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1 id="auth-title">🏫 導師班級管理系統</h1>
+      <p id="auth-sub">請登入您的帳號以繼續</p>
     </div>
+    <div class="field-wrap">
+      <input type="email" id="auth-email" placeholder="電子信箱">
+    </div>
+    <div class="field-wrap">
+      <input type="password" id="auth-password" placeholder="密碼">
+      <button class="eye-toggle" id="eye-btn" type="button" title="顯示/隱藏密碼">👁️</button>
+    </div>
+    <button class="auth-btn" id="auth-submit">進入系統</button>
+    <div class="auth-switch">
+      <span id="auth-switch-text">還沒有帳號？</span>
+      <a id="auth-switch-link">立即註冊</a>
+    </div>
+  </div>
 </div>
 
+<!-- 座位點擊彈窗 -->
+<div class="modal-bg hidden" id="seat-modal">
+  <div class="modal-box">
+    <h4 id="seat-modal-title">編輯座位</h4>
+    <label>座號</label>
+    <input type="text" id="modal-no" placeholder="例如：01">
+    <label>姓名</label>
+    <input type="text" id="modal-name" placeholder="學生姓名">
+    <div class="modal-btns">
+      <button class="btn" id="modal-cancel">取消</button>
+      <button class="btn btn-primary" id="modal-ok">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- 主介面 -->
 <div class="sidebar">
-    <div class="config-group">
-        <h3>🏫 檔案管理</h3>
-        <button class="btn-new" id="btn-reset">建立新班級</button>
-        <select id="classDropdown"><option value="">-- 讀取雲端班級 --</option></select>
-        <div style="display: flex; gap: 5px;">
-            <button class="btn-load" id="btn-load-data">📂 載入</button>
-            <button class="btn-cloud" id="btn-save-data">☁️ 儲存</button>
+  <div class="sidebar-header">
+    <h2>🏫 座位安排系統</h2>
+    <span id="user-email-display">未登入</span>
+  </div>
+  <div class="sidebar-body">
+
+    <!-- 檔案管理 -->
+    <div class="card">
+      <div class="card-title">📁 雲端檔案</div>
+      <label>讀取已儲存班級</label>
+      <select id="class-dropdown"><option value="">── 選擇班級 ──</option></select>
+      <div class="btn-row">
+        <button class="btn btn-success btn-sm" id="btn-load">📂 載入</button>
+        <button class="btn btn-purple btn-sm" id="btn-save">☁️ 儲存</button>
+      </div>
+    </div>
+
+    <!-- 佈局設定 -->
+    <div class="card">
+      <div class="card-title">✏️ 佈局與名單</div>
+      <label>班級名稱</label>
+      <input type="text" id="classTitleInput" placeholder="例如：資二甲">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label>欄數（左右）</label>
+          <input type="number" id="cols" value="6" min="1" max="9">
         </div>
-        <button class="btn-img" id="btn-export">🖼️ 匯出圖片</button>
-    </div>
-    <div class="config-group">
-        <h3>✏️ 佈局與名單</h3>
-        <label>班級名稱</label>
-        <input type="text" id="classTitleInput" placeholder="例如：資二甲">
-        <div style="display: flex; gap: 10px;">
-            <div><label>欄</label><input type="number" id="cols" value="7" min="1" max="7"></div>
-            <div><label>列</label><input type="number" id="rows" value="6" min="1" max="7"></div>
+        <div>
+          <label>列數（前後）</label>
+          <input type="number" id="rows" value="5" min="1" max="9">
         </div>
-        <label>學生名單 (座號 姓名)</label>
-        <textarea id="studentListInput" style="height: 120px;"></textarea>
-        <button class="btn-shuffle" id="btn-shuffle">🎲 隨機排位</button>
+      </div>
+      <label>學生名單（座號 姓名，每行一人）</label>
+      <textarea id="studentListInput" style="height:130px" placeholder="01 王小明&#10;02 李小華&#10;03 陳大文"></textarea>
+      <button class="btn btn-primary btn-lg" id="btn-shuffle">🎲 隨機排位</button>
+      <p style="font-size:11px;color:#94a3b8;margin-top:-4px">右鍵點擊座位可鎖定（黃色＝固定不移動）</p>
     </div>
-    <div class="config-group">
-        <h3>👔 班級幹部</h3>
-        <div id="officer-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;"></div>
+
+    <!-- 幹部 -->
+    <div class="card">
+      <div class="card-title">👔 班級幹部</div>
+      <div class="officer-grid" id="officer-inputs"></div>
     </div>
-    <div class="config-group">
-        <h3>📝 備註</h3>
-        <textarea id="infoInput" style="height: 60px;"></textarea>
+
+    <!-- 備註 -->
+    <div class="card">
+      <div class="card-title">📝 備註欄</div>
+      <textarea id="infoInput" style="height:60px" placeholder="班導師、學期、備注事項…"></textarea>
     </div>
-    <button class="btn-out" id="btn-logout">🚪 登出系統</button>
+
+    <!-- 匯出 -->
+    <div class="card">
+      <div class="card-title">🖼️ 匯出</div>
+      <button class="btn btn-warning" id="btn-export">📸 匯出為圖片（PNG）</button>
+      <button class="btn btn-danger" id="btn-reset">🗑️ 建立新班級</button>
+    </div>
+
+  </div>
+  <div class="sidebar-footer">
+    <button class="btn" id="btn-logout">🚪 登出系統</button>
+  </div>
 </div>
 
-<div class="main-content">
-    <div id="capture-area">
-        <h1 id="display-title">班級座位表</h1>
-        <div class="teacher-area"><div class="teacher-desk">講 桌</div></div>
-        <div class="classroom-layout">
-            <div class="grid-container"><div id="grid" class="grid"></div></div>
-            <div class="attendance-list">
-                <div class="attendance-header">座號名條</div>
-                <div id="attendance-items"></div>
-            </div>
-        </div>
-        <div class="officer-section" id="officer-display"></div>
-        <div id="display-info" class="info-footer"></div>
+<!-- 主畫面 -->
+<div class="main">
+  <div id="capture-area">
+    <h1 id="display-title">班級座位表</h1>
+    <div class="teacher-row">
+      <div class="teacher-desk">講　桌</div>
     </div>
+    <div class="classroom-body">
+      <div id="grid"></div>
+      <div class="attendance-col">
+        <div class="att-header">座號名條</div>
+        <div id="attendance-items"></div>
+      </div>
+    </div>
+    <div class="officers-bar" id="officer-display"></div>
+    <div class="info-footer" id="display-info"></div>
+  </div>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp }                         from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword,
+         createUserWithEmailAndPassword,
+         onAuthStateChanged, signOut }           from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc,
+         getDocs, collection }                   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+// ── Firebase 設定 ──
+const firebaseConfig = {
+  apiKey:            "AIzaSyBUqcJTmApajA1-KfGT6QbXMDUuKBkBngk",
+  authDomain:        "newseat2-a4a11.firebaseapp.com",
+  projectId:         "newseat2-a4a11",
+  storageBucket:     "newseat2-a4a11.firebasestorage.app",
+  messagingSenderId: "604055111582",
+  appId:             "1:604055111582:web:df3fb3f4c547d7f720b88f"
+};
 
-    let currentUser = null;
-    let isRegisterMode = false;
-    const officerTitles = ["班長", "副班長", "風紀", "學藝", "衛生", "體育", "總務", "環保", "輔導", "實習", "圖書", "服務"];
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+let currentUser = null;
+let isRegMode   = false;
 
-    // 介面與事件綁定
-    const eyeIcon = document.getElementById('eye-icon');
-    const passwordInput = document.getElementById('auth-password');
-    const authBtn = document.getElementById('btn-auth-action');
-    const switchModeBtn = document.getElementById('btn-switch-mode');
-    
-    // 修復小眼睛
-    eyeIcon.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            eyeIcon.innerText = '👁️‍🗨️';
-        } else {
-            passwordInput.type = 'password';
-            eyeIcon.innerText = '👁️';
-        }
-    });
+const OFFICER_TITLES = ["班長","副班長","風紀","學藝","衛生","體育","總務","環保","輔導","資訊","圖書","服務"];
 
-    // 修復切換模式
-    switchModeBtn.addEventListener('click', () => {
-        isRegisterMode = !isRegisterMode;
-        document.getElementById('auth-title').innerText = isRegisterMode ? "註冊新帳號" : "導師班級管理系統";
-        authBtn.innerText = isRegisterMode ? "立即註冊" : "進入系統";
-        switchModeBtn.innerText = isRegisterMode ? "已有帳號？返回登入" : "註冊新帳號";
-    });
+// ── 登入介面 ──
+const overlay    = document.getElementById("auth-overlay");
+const emailInput = document.getElementById("auth-email");
+const pwInput    = document.getElementById("auth-password");
+const eyeBtn     = document.getElementById("eye-btn");
+const authSubmit = document.getElementById("auth-submit");
+const authTitle  = document.getElementById("auth-title");
+const authSub    = document.getElementById("auth-sub");
+const switchLink = document.getElementById("auth-switch-link");
+const switchText = document.getElementById("auth-switch-text");
 
-    // 修復登入按鈕
-    authBtn.addEventListener('click', async () => {
-        const email = document.getElementById('auth-email').value;
-        const password = passwordInput.value;
-        if (!email || !password) return alert("請輸入完整的帳號密碼");
-        
-        try {
-            if (isRegisterMode) {
-                await createUserWithEmailAndPassword(auth, email, password);
-                alert("註冊成功！");
-            } else {
-                await signInWithEmailAndPassword(auth, email, password);
-            }
-        } catch (err) {
-            alert("錯誤: " + err.message);
-        }
-    });
+// 小眼睛 - 獨立 button 元素，不會觸發 form submit
+eyeBtn.addEventListener("click", () => {
+  if (pwInput.type === "password") {
+    pwInput.type = "text";
+    eyeBtn.textContent = "🙈";
+  } else {
+    pwInput.type = "password";
+    eyeBtn.textContent = "👁️";
+  }
+});
 
-    // 核心邏輯
-    function initOfficers() {
-        const inputArea = document.getElementById('officer-inputs');
-        const displayArea = document.getElementById('officer-display');
-        inputArea.innerHTML = '';
-        displayArea.innerHTML = '';
-        officerTitles.forEach((title, i) => {
-            const inp = document.createElement('input');
-            inp.type = "text"; inp.placeholder = title; inp.id = `off-inp-${i}`;
-            inp.oninput = () => { document.getElementById(`off-disp-${i}`).innerText = inp.value; };
-            inputArea.appendChild(inp);
-            const box = document.createElement('div');
-            box.className = 'officer-box';
-            box.innerHTML = `<div style="font-weight:bold;border-bottom:1px solid #eee;margin-bottom:2px">${title}</div><div id="off-disp-${i}"></div>`;
-            displayArea.appendChild(box);
-        });
+// 切換登入/註冊
+switchLink.addEventListener("click", () => {
+  isRegMode = !isRegMode;
+  if (isRegMode) {
+    authTitle.textContent = "📝 建立新帳號";
+    authSub.textContent   = "輸入信箱與密碼完成註冊";
+    authSubmit.textContent = "立即註冊";
+    switchText.textContent = "已有帳號？";
+    switchLink.textContent = "返回登入";
+  } else {
+    authTitle.textContent  = "🏫 導師班級管理系統";
+    authSub.textContent    = "請登入您的帳號以繼續";
+    authSubmit.textContent = "進入系統";
+    switchText.textContent = "還沒有帳號？";
+    switchLink.textContent = "立即註冊";
+  }
+});
+
+// 登入 / 註冊
+authSubmit.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const pw    = pwInput.value;
+  if (!email || !pw) { alert("請輸入電子信箱與密碼"); return; }
+  authSubmit.disabled = true;
+  authSubmit.textContent = "處理中…";
+  try {
+    if (isRegMode) {
+      await createUserWithEmailAndPassword(auth, email, pw);
+      alert("✅ 註冊成功，已自動登入！");
+    } else {
+      await signInWithEmailAndPassword(auth, email, pw);
     }
+  } catch (e) {
+    const msgs = {
+      "auth/invalid-email":        "信箱格式不正確",
+      "auth/user-not-found":       "找不到此帳號，請先註冊",
+      "auth/wrong-password":       "密碼錯誤",
+      "auth/email-already-in-use": "此信箱已被註冊",
+      "auth/weak-password":        "密碼至少需要 6 個字元",
+      "auth/invalid-credential":   "帳號或密碼錯誤",
+    };
+    alert("❌ " + (msgs[e.code] || e.message));
+    authSubmit.disabled = false;
+    authSubmit.textContent = isRegMode ? "立即註冊" : "進入系統";
+  }
+});
 
-    onAuthStateChanged(auth, (user) => {
-        currentUser = user;
-        document.getElementById('auth-overlay').classList.toggle('hidden', !!user);
-        if (user) {
-            initOfficers();
-            initGrid();
-            refreshClassList();
-        }
+// Enter 鍵送出
+[emailInput, pwInput].forEach(el => el.addEventListener("keydown", e => {
+  if (e.key === "Enter") authSubmit.click();
+}));
+
+// ── 登入狀態監聽 ──
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  overlay.classList.toggle("hidden", !!user);
+  if (user) {
+    document.getElementById("user-email-display").textContent = user.email;
+    initOfficers();
+    initGrid();
+    refreshClassList();
+  }
+});
+
+document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
+
+// ── 幹部欄位 ──
+function initOfficers() {
+  const inp  = document.getElementById("officer-inputs");
+  const disp = document.getElementById("officer-display");
+  inp.innerHTML  = "";
+  disp.innerHTML = "";
+  OFFICER_TITLES.forEach((t, i) => {
+    // 輸入
+    const wrap  = document.createElement("div");
+    wrap.className = "officer-item";
+    const lbl   = document.createElement("label");
+    lbl.textContent = t;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = t;
+    input.id = `off-inp-${i}`;
+    input.addEventListener("input", () => {
+      document.getElementById(`off-name-${i}`).textContent = input.value;
     });
+    wrap.append(lbl, input);
+    inp.appendChild(wrap);
+    // 顯示
+    const box = document.createElement("div");
+    box.className = "off-box";
+    box.innerHTML = `<div class="off-box-title">${t}</div><div class="off-box-name" id="off-name-${i}"></div>`;
+    disp.appendChild(box);
+  });
+}
 
-    document.getElementById('btn-logout').onclick = () => signOut(auth);
-    document.getElementById('classTitleInput').oninput = (e) => { document.getElementById('display-title').innerText = e.target.value || "班級座位表"; };
-    document.getElementById('infoInput').oninput = (e) => { document.getElementById('display-info').innerText = e.target.value; };
-    document.getElementById('cols').onchange = () => initGrid();
-    document.getElementById('rows').onchange = () => initGrid();
-    document.getElementById('studentListInput').oninput = updateAttendance;
+// ── 格線 ──
+let activeSeat = null;
 
-    function initGrid() {
-        const grid = document.getElementById('grid');
-        const c = parseInt(document.getElementById('cols').value);
-        grid.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
-        grid.innerHTML = '';
-        const total = c * (parseInt(document.getElementById('rows').value));
-        for (let i = 0; i < total; i++) {
-            const seat = document.createElement('div');
-            seat.className = 'seat';
-            seat.innerHTML = `<div class="seat-no-row"></div><div class="seat-name-row"></div>`;
-            seat.onclick = () => {
-                const name = prompt("姓名：", seat.querySelector('.seat-name-row').innerText);
-                const no = prompt("座號：", seat.querySelector('.seat-no-row').innerText);
-                seat.querySelector('.seat-name-row').innerText = name || "";
-                seat.querySelector('.seat-no-row').innerText = no || "";
-            };
-            seat.oncontextmenu = (e) => { e.preventDefault(); seat.classList.toggle('is-fixed'); };
-            grid.appendChild(seat);
-        }
+function initGrid() {
+  const gridEl = document.getElementById("grid");
+  const c = parseInt(document.getElementById("cols").value) || 6;
+  const r = parseInt(document.getElementById("rows").value) || 5;
+  gridEl.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
+  gridEl.innerHTML = "";
+  for (let i = 0; i < c * r; i++) {
+    const seat = document.createElement("div");
+    seat.className = "seat";
+    seat.innerHTML = `<div class="seat-no"></div><div class="seat-name"></div>`;
+    seat.addEventListener("click", () => openSeatModal(seat));
+    seat.addEventListener("contextmenu", e => {
+      e.preventDefault();
+      seat.classList.toggle("is-fixed");
+    });
+    gridEl.appendChild(seat);
+  }
+}
+
+document.getElementById("cols").addEventListener("change", initGrid);
+document.getElementById("rows").addEventListener("change", initGrid);
+
+// 座位彈窗
+const seatModal   = document.getElementById("seat-modal");
+const modalNo     = document.getElementById("modal-no");
+const modalName   = document.getElementById("modal-name");
+
+function openSeatModal(seat) {
+  activeSeat = seat;
+  modalNo.value   = seat.querySelector(".seat-no").textContent;
+  modalName.value = seat.querySelector(".seat-name").textContent;
+  seatModal.classList.remove("hidden");
+  modalName.focus();
+}
+document.getElementById("modal-cancel").addEventListener("click", () => {
+  seatModal.classList.add("hidden");
+  activeSeat = null;
+});
+document.getElementById("modal-ok").addEventListener("click", () => {
+  if (activeSeat) {
+    activeSeat.querySelector(".seat-no").textContent   = modalNo.value;
+    activeSeat.querySelector(".seat-name").textContent = modalName.value;
+  }
+  seatModal.classList.add("hidden");
+  activeSeat = null;
+});
+[modalNo, modalName].forEach(el => el.addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("modal-ok").click();
+}));
+seatModal.addEventListener("click", e => {
+  if (e.target === seatModal) {
+    seatModal.classList.add("hidden");
+    activeSeat = null;
+  }
+});
+
+// ── 名條更新 ──
+document.getElementById("studentListInput").addEventListener("input", updateAttendance);
+function updateAttendance() {
+  const lines = document.getElementById("studentListInput").value.split("\n").filter(s => s.trim());
+  const cont  = document.getElementById("attendance-items");
+  cont.innerHTML = "";
+  lines.forEach(s => {
+    const m   = s.match(/^(\S+)\s+(.*)/);
+    const div = document.createElement("div");
+    div.className = "att-item";
+    div.innerHTML = m ? `<b>${m[1]}</b> ${m[2]}` : s;
+    cont.appendChild(div);
+  });
+}
+
+// ── 班級名稱 / 備註即時更新 ──
+document.getElementById("classTitleInput").addEventListener("input", e => {
+  document.getElementById("display-title").textContent = e.target.value || "班級座位表";
+});
+document.getElementById("infoInput").addEventListener("input", e => {
+  document.getElementById("display-info").textContent = e.target.value;
+});
+
+// ── 隨機排位 ──
+document.getElementById("btn-shuffle").addEventListener("click", () => {
+  const students = document.getElementById("studentListInput").value
+    .split("\n").filter(s => s.trim())
+    .sort(() => Math.random() - 0.5);
+  const seats = Array.from(document.querySelectorAll(".seat:not(.is-fixed)"));
+  seats.forEach(s => {
+    s.querySelector(".seat-name").textContent = "";
+    s.querySelector(".seat-no").textContent   = "";
+  });
+  students.forEach((s, i) => {
+    if (!seats[i]) return;
+    const m = s.match(/^(\S+)\s+(.*)/);
+    seats[i].querySelector(".seat-name").textContent = m ? m[2] : s;
+    seats[i].querySelector(".seat-no").textContent   = m ? m[1] : "";
+  });
+});
+
+// ── 儲存至 Firestore ──
+document.getElementById("btn-save").addEventListener("click", async () => {
+  if (!currentUser) return;
+  const title = document.getElementById("classTitleInput").value.trim();
+  if (!title) { alert("請先輸入班級名稱"); return; }
+  const layout = Array.from(document.querySelectorAll(".seat")).map(s => ({
+    name:  s.querySelector(".seat-name").textContent,
+    no:    s.querySelector(".seat-no").textContent,
+    fixed: s.classList.contains("is-fixed")
+  }));
+  const officers = OFFICER_TITLES.map((_, i) => {
+    const el = document.getElementById(`off-inp-${i}`);
+    return el ? el.value : "";
+  });
+  try {
+    await setDoc(
+      doc(db, "users", currentUser.uid, "classes", title),
+      {
+        cols:    document.getElementById("cols").value,
+        rows:    document.getElementById("rows").value,
+        list:    document.getElementById("studentListInput").value,
+        info:    document.getElementById("infoInput").value,
+        layout, officers
+      }
+    );
+    alert("✅ 儲存成功！");
+    refreshClassList();
+  } catch (e) {
+    alert("❌ 儲存失敗：" + e.message);
+  }
+});
+
+// ── 讀取班級列表 ──
+async function refreshClassList() {
+  if (!currentUser) return;
+  const dd   = document.getElementById("class-dropdown");
+  dd.innerHTML = '<option value="">── 選擇班級 ──</option>';
+  try {
+    const snap = await getDocs(collection(db, "users", currentUser.uid, "classes"));
+    snap.forEach(d => {
+      const o = document.createElement("option");
+      o.value = o.textContent = d.id;
+      dd.appendChild(o);
+    });
+  } catch (e) { console.warn("讀取清單失敗", e); }
+}
+
+// ── 載入班級資料 ──
+document.getElementById("btn-load").addEventListener("click", async () => {
+  const title = document.getElementById("class-dropdown").value;
+  if (!title) { alert("請先選擇一個班級"); return; }
+  try {
+    const snap = await getDoc(doc(db, "users", currentUser.uid, "classes", title));
+    if (!snap.exists()) { alert("找不到資料"); return; }
+    const data = snap.data();
+    document.getElementById("classTitleInput").value   = title;
+    document.getElementById("cols").value              = data.cols;
+    document.getElementById("rows").value              = data.rows;
+    document.getElementById("studentListInput").value  = data.list || "";
+    document.getElementById("infoInput").value         = data.info || "";
+    document.getElementById("display-title").textContent = title;
+    document.getElementById("display-info").textContent  = data.info || "";
+    initGrid();
+    updateAttendance();
+    const seats = document.querySelectorAll(".seat");
+    (data.layout || []).forEach((s, i) => {
+      if (!seats[i]) return;
+      seats[i].querySelector(".seat-name").textContent = s.name || "";
+      seats[i].querySelector(".seat-no").textContent   = s.no   || "";
+      if (s.fixed) seats[i].classList.add("is-fixed");
+    });
+    if (data.officers) {
+      data.officers.forEach((v, i) => {
+        const inp = document.getElementById(`off-inp-${i}`);
+        const nm  = document.getElementById(`off-name-${i}`);
+        if (inp) inp.value = v;
+        if (nm)  nm.textContent = v;
+      });
     }
+  } catch (e) {
+    alert("❌ 載入失敗：" + e.message);
+  }
+});
 
-    function updateAttendance() {
-        const list = document.getElementById('studentListInput').value.split('\n').filter(s=>s.trim());
-        const container = document.getElementById('attendance-items');
-        container.innerHTML = '';
-        list.forEach(s => {
-            const match = s.match(/^(\d+)\s*(.*)/);
-            const div = document.createElement('div');
-            div.style.borderBottom = '1px solid #ddd';
-            div.innerHTML = `<b>${match?match[1]:'--'}</b> ${match?match[2]:s}`;
-            container.appendChild(div);
-        });
-    }
+// ── 匯出圖片 ──
+document.getElementById("btn-export").addEventListener("click", () => {
+  html2canvas(document.getElementById("capture-area"), { scale: 2, useCORS: true }).then(canvas => {
+    const a = document.createElement("a");
+    a.download = (document.getElementById("classTitleInput").value || "座位表") + ".png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  });
+});
 
-    document.getElementById('btn-shuffle').onclick = () => {
-        const students = document.getElementById('studentListInput').value.split('\n').filter(s=>s.trim()).sort(()=>Math.random()-0.5);
-        const seats = Array.from(document.querySelectorAll('.seat')).filter(s=>!s.classList.contains('is-fixed'));
-        seats.forEach(s => { s.querySelector('.seat-name-row').innerText = ""; s.querySelector('.seat-no-row').innerText = ""; });
-        students.forEach((s, i) => {
-            if (seats[i]) {
-                const match = s.match(/^(\d+)\s*(.*)/);
-                seats[i].querySelector('.seat-name-row').innerText = match ? match[2] : s;
-                seats[i].querySelector('.seat-no-row').innerText = match ? match[1] : "";
-            }
-        });
-    };
-
-    document.getElementById('btn-save-data').onclick = async () => {
-        if (!currentUser) return;
-        const title = document.getElementById('classTitleInput').value.trim();
-        if (!title) return alert("請輸入班級名稱");
-        const layout = Array.from(document.querySelectorAll('.seat')).map(s => ({
-            name: s.querySelector('.seat-name-row').innerText,
-            no: s.querySelector('.seat-no-row').innerText,
-            fixed: s.classList.contains('is-fixed')
-        }));
-        const officers = Array.from({length:12}).map((_,i)=>document.getElementById(`off-inp-${i}`).value);
-        await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', title), {
-            cols: document.getElementById('cols').value,
-            rows: document.getElementById('rows').value,
-            list: document.getElementById('studentListInput').value,
-            info: document.getElementById('infoInput').value,
-            layout, officers
-        });
-        alert("儲存成功！");
-        refreshClassList();
-    };
-
-    async function refreshClassList() {
-        const d = document.getElementById('classDropdown');
-        d.innerHTML = '<option value="">-- 讀取雲端班級 --</option>';
-        const snap = await getDocs(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'classes'));
-        snap.forEach(doc => { const o = document.createElement('option'); o.value = doc.id; o.innerText = doc.id; d.appendChild(o); });
-    }
-
-    document.getElementById('btn-load-data').onclick = async () => {
-        const title = document.getElementById('classDropdown').value;
-        if (!title) return;
-        const snap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', title));
-        if (snap.exists()) {
-            const data = snap.data();
-            document.getElementById('classTitleInput').value = title;
-            document.getElementById('cols').value = data.cols;
-            document.getElementById('rows').value = data.rows;
-            document.getElementById('studentListInput').value = data.list;
-            document.getElementById('infoInput').value = data.info;
-            initGrid();
-            document.getElementById('display-title').innerText = title;
-            document.getElementById('display-info').innerText = data.info;
-            updateAttendance();
-            const seats = document.querySelectorAll('.seat');
-            data.layout.forEach((s, i) => {
-                if (seats[i]) {
-                    seats[i].querySelector('.seat-name-row').innerText = s.name;
-                    seats[i].querySelector('.seat-no-row').innerText = s.no;
-                    if (s.fixed) seats[i].classList.add('is-fixed');
-                }
-            });
-            if (data.officers) {
-                data.officers.forEach((v, i) => {
-                    document.getElementById(`off-inp-${i}`).value = v;
-                    document.getElementById(`off-disp-${i}`).innerText = v;
-                });
-            }
-        }
-    };
-
-    document.getElementById('btn-export').onclick = () => {
-        html2canvas(document.getElementById('capture-area'), { scale: 2 }).then(canvas => {
-            const a = document.createElement('a');
-            a.download = "座位表.png";
-            a.href = canvas.toDataURL();
-            a.click();
-        });
-    };
-
-    document.getElementById('btn-reset').onclick = () => { if(confirm("即將重設頁面，未儲存資料將遺失")) location.reload(); };
-
-    const initToken = async () => {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        }
-    };
-    initToken();
+// ── 重設 ──
+document.getElementById("btn-reset").addEventListener("click", () => {
+  if (confirm("確定要清除目前所有資料，建立新班級？")) location.reload();
+});
 </script>
 </body>
 </html>

@@ -108,6 +108,9 @@
         <button id="exportBtn" class="w-full bg-amber-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-amber-600 transition text-sm">
           <i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)
         </button>
+        <button id="exportPdfBtn" class="w-full bg-rose-600 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-rose-700 transition text-sm">
+          <i data-lucide="file-text" class="w-4 h-4"></i>匯出 A4 PDF
+        </button>
         <button id="resetBtn" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition text-sm">
           <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>重設所有欄位
         </button>
@@ -143,7 +146,7 @@
         <!-- 名條 -->
         <div class="w-28 border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden">
           <div class="bg-black text-white text-center py-1.5 font-bold text-xs tracking-widest">座號名單</div>
-          <div id="nameList" class="flex-1 p-1.5 font-bold overflow-hidden" style="font-size:11px;line-height:1.55"></div>
+          <div id="nameList" class="flex-1 p-1.5 font-bold overflow-hidden" style="font-size:13px;line-height:1.6"></div>
         </div>
       </div>
 
@@ -397,6 +400,58 @@ document.getElementById('exportBtn').onclick = async () => {
     lucide.createIcons();
   };
   document.head.appendChild(script);
+};
+
+// ===== 匯出 A4 PDF =====
+document.getElementById('exportPdfBtn').onclick = async () => {
+  const btn = document.getElementById('exportPdfBtn');
+  btn.textContent = '產生中...';
+  // 載入 html2canvas
+  await new Promise((res) => {
+    if (window.html2canvas) return res();
+    const s = document.createElement('script');
+    s.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+    s.onload = res;
+    document.head.appendChild(s);
+  });
+  // 載入 jsPDF
+  await new Promise((res) => {
+    if (window.jspdf) return res();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = res;
+    document.head.appendChild(s);
+  });
+  try {
+    const canvas = await html2canvas(document.getElementById('captureArea'), {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff'
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    // A4: 210 x 297 mm
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210, pageH = 297;
+    const margin = 8;
+    const printW = pageW - margin * 2;
+    const imgH = (canvas.height / canvas.width) * printW;
+    // 若內容超過一頁則分頁
+    if (imgH <= pageH - margin * 2) {
+      const topMargin = (pageH - imgH) / 2;
+      pdf.addImage(imgData, 'PNG', margin, topMargin, printW, imgH);
+    } else {
+      // 縮放至剛好一頁
+      const scaleH = pageH - margin * 2;
+      const scaleW = (canvas.width / canvas.height) * scaleH;
+      const leftMargin = (pageW - scaleW) / 2;
+      pdf.addImage(imgData, 'PNG', leftMargin, margin, scaleW, scaleH);
+    }
+    const title = document.getElementById('classTitle').value || '座位表';
+    pdf.save(`座位表_${title}.pdf`);
+  } catch(e) {
+    alert('PDF 匯出失敗：' + e.message);
+  }
+  btn.innerHTML = '<i data-lucide="file-text" class="w-4 h-4"></i>匯出 A4 PDF';
+  lucide.createIcons();
 };
 
 // ===== 密碼顯示切換 =====

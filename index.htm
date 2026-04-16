@@ -1,412 +1,510 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithCustomToken, 
-  signInAnonymously, 
-  onAuthStateChanged, 
-  signOut,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
-} from 'firebase/auth';
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  collection, 
-  onSnapshot 
-} from 'firebase/firestore';
-import { Eye, EyeOff, LogOut, Save, FolderOpen, Shuffle, Camera, Lock, Unlock, RotateCcw } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>座位安排系統</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  @media print { .no-print { display: none !important; } }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  body { font-family: 'Segoe UI', 'Noto Sans TC', sans-serif; }
+  .dragging { opacity: 0.3; }
+  .drag-over { border-color: #3b82f6 !important; background: #eff6ff !important; }
+</style>
+</head>
+<body class="bg-slate-100">
 
-// --- Firebase 配置 ---
-const firebaseConfig = JSON.parse(__firebase_config);
+<!-- 登入畫面 -->
+<div id="authScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+    <h2 class="text-2xl font-bold mb-2 text-slate-800 text-center">座位安排系統</h2>
+    <p class="text-xs text-slate-400 text-center mb-6">導師專用</p>
+    <div class="space-y-3">
+      <input id="emailInput" type="email" placeholder="電子郵件" class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"/>
+      <div class="relative">
+        <input id="passwordInput" type="password" placeholder="密碼" class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10"/>
+        <button id="togglePwd" class="absolute right-3 top-3 text-slate-400">
+          <i data-lucide="eye" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <button id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition text-sm">登入</button>
+      <button id="registerBtn" class="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">註冊新帳號</button>
+      <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
+    </div>
+    <p id="authError" class="text-red-500 text-xs mt-3 text-center hidden"></p>
+  </div>
+</div>
+
+<!-- 主應用 -->
+<div id="mainApp" class="hidden flex h-screen overflow-hidden">
+
+  <!-- 側邊欄 -->
+  <aside class="no-print w-[320px] min-w-[320px] bg-white border-r shadow-lg overflow-y-auto flex flex-col z-10">
+    <div class="p-4 bg-slate-800 text-white flex justify-between items-center sticky top-0 z-20">
+      <h1 class="text-base font-bold">控制面板</h1>
+      <div class="flex gap-2">
+        <span id="userEmail" class="text-xs text-slate-400 self-center"></span>
+        <button id="logoutBtn" class="p-1.5 hover:bg-slate-700 rounded-full transition" title="登出">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="p-4 space-y-5 pb-16">
+
+      <!-- 雲端存檔 -->
+      <div class="bg-slate-50 p-3 rounded-xl border space-y-2" id="cloudSection">
+        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">☁ 雲端存檔</h3>
+        <select id="savedClassSelect" class="w-full p-2 border rounded text-xs bg-white">
+          <option value="">-- 選擇存檔 --</option>
+        </select>
+        <div class="flex gap-2">
+          <button id="loadBtn" class="flex-1 bg-green-600 text-white py-2 rounded text-xs font-bold hover:bg-green-700 transition">載入</button>
+          <button id="saveBtn" class="flex-1 bg-violet-600 text-white py-2 rounded text-xs font-bold hover:bg-violet-700 transition flex items-center justify-center gap-1">
+            <i data-lucide="save" class="w-3 h-3"></i>儲存
+          </button>
+        </div>
+      </div>
+
+      <!-- 班級設定 -->
+      <div class="space-y-3">
+        <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider border-b pb-1">班級設定</h3>
+        <input id="classTitle" type="text" value="113學年度 資二甲 座位表" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none"/>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-[10px] text-slate-400 block mb-1">欄數（左右）</label>
+            <input id="colsInput" type="number" value="6" min="1" max="12" class="w-full p-2 border rounded text-center text-sm"/>
+          </div>
+          <div class="flex-1">
+            <label class="text-[10px] text-slate-400 block mb-1">列數（前後）</label>
+            <input id="rowsInput" type="number" value="5" min="1" max="12" class="w-full p-2 border rounded text-center text-sm"/>
+          </div>
+        </div>
+        <label class="text-[10px] text-slate-400 block">學生名單（格式：座號 姓名，一行一位）</label>
+        <textarea id="studentList" rows="7" class="w-full p-2 border rounded text-xs font-mono leading-tight" placeholder="01 王小明&#10;02 李小花&#10;03 陳大文"></textarea>
+        <button id="shuffleBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition">
+          <i data-lucide="shuffle" class="w-4 h-4"></i>隨機排位（保留鎖定）
+        </button>
+      </div>
+
+      <!-- 幹部 -->
+      <div class="space-y-2">
+        <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">幹部資料</h3>
+        <div id="officersGrid" class="grid grid-cols-2 gap-2"></div>
+      </div>
+
+      <!-- 備註 -->
+      <div class="space-y-1">
+        <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">導師備註</h3>
+        <textarea id="memoInput" rows="4" class="w-full p-2 border rounded text-xs" placeholder="說明事項..."></textarea>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="space-y-2 pt-1">
+        <button id="exportBtn" class="w-full bg-amber-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-amber-600 transition text-sm">
+          <i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)
+        </button>
+        <button id="resetBtn" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition text-sm">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>重設所有欄位
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 預覽區 -->
+  <main class="flex-1 overflow-auto bg-slate-500 p-6 flex justify-center">
+    <div id="captureArea" class="w-[820px] min-w-[820px] bg-white shadow-2xl p-[44px] flex flex-col text-black" style="min-height:1100px">
+
+      <!-- 標題 -->
+      <h1 id="previewTitle" class="text-center text-3xl font-black pb-3 mb-8 border-b-[3px] border-black tracking-[0.2em]">113學年度 資二甲 座位表</h1>
+
+      <!-- 講桌 -->
+      <div class="flex justify-center mb-8">
+        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50">講　桌</div>
+      </div>
+
+      <!-- 座位區 + 名條 -->
+      <div class="flex gap-6 flex-1">
+        <div class="flex-1 flex flex-col gap-8 min-w-0">
+
+          <!-- 座位格 -->
+          <div id="seatGrid" class="grid gap-2"></div>
+
+          <!-- 幹部表 -->
+          <div class="mt-auto">
+            <div id="officersTable" class="grid grid-cols-6 border-t-[3px] border-l-[3px] border-black"></div>
+          </div>
+        </div>
+
+        <!-- 名條 -->
+        <div class="w-24 border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden">
+          <div class="bg-black text-white text-center py-1.5 font-bold text-[10px] tracking-widest">座號名單</div>
+          <div id="nameList" class="flex-1 p-1 text-[9px] leading-relaxed font-bold overflow-hidden"></div>
+        </div>
+      </div>
+
+      <!-- 備註區 -->
+      <div class="mt-6">
+        <div id="memoDisplay" class="border-[3px] border-black p-5 min-h-[120px] text-base leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium">
+          <span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>
+          暫無說明事項。
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 座位編輯 Modal -->
+<div id="seatModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs space-y-4">
+    <h3 class="font-bold border-b pb-2 flex justify-between text-slate-800">編輯座位 <span id="modalSeatNum" class="text-slate-400">#1</span></h3>
+    <div>
+      <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">座號</label>
+      <input id="modalNo" type="text" class="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none font-bold"/>
+    </div>
+    <div>
+      <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">學生姓名</label>
+      <input id="modalName" type="text" class="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none font-bold text-lg"/>
+    </div>
+    <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border">
+      <input type="checkbox" id="modalFixed" class="w-5 h-5 cursor-pointer accent-blue-600"/>
+      <label for="modalFixed" class="font-bold cursor-pointer text-slate-700 text-sm">🔒 鎖定此位置</label>
+    </div>
+    <div class="flex gap-2">
+      <button id="modalCancel" class="flex-1 py-2.5 bg-slate-100 rounded-xl text-sm font-bold hover:bg-slate-200">取消</button>
+      <button id="modalSave" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ===== 你的 Firebase 設定 =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAzn6LMMuRuDdes0u1pQZZapgCIZi-ivZg",
+  authDomain: "teachseat-e04a1.firebaseapp.com",
+  projectId: "teachseat-e04a1",
+  storageBucket: "teachseat-e04a1.firebasestorage.app",
+  messagingSenderId: "91449526838",
+  appId: "1:91449526838:web:802655d5f909f8e840a697"
+};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-const OFFICERS = ["班長", "副班長", "風紀", "學藝", "衛生", "體育", "總務", "環保", "輔導", "資訊", "圖書", "服務"];
+// ===== 常數 =====
+const OFFICERS = ["班長","副班長","風紀","學藝","衛生","體育","總務","環保","輔導","資訊","圖書","服務"];
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [authMode, setAuthMode] = useState('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+// ===== 狀態 =====
+let layout = [];
+let cols = 6, rows = 5;
+let savedClasses = [];
+let editingIdx = null;
+let draggedIdx = null;
+let currentUser = null;
 
-  // 應用程式狀態
-  const [classTitle, setClassTitle] = useState('113學年度 資二甲 座位表');
-  const [cols, setCols] = useState(6);
-  const [rows, setRows] = useState(5);
-  const [studentListRaw, setStudentListRaw] = useState('');
-  const [memo, setMemo] = useState('');
-  const [officers, setOfficers] = useState(Array(OFFICERS.length).fill(''));
-  const [layout, setLayout] = useState([]);
-  const [savedClasses, setSavedClasses] = useState([]);
-  const [selectedClassId, setSelectedClassId] = useState('');
-  const [editingSeat, setEditingSeat] = useState(null);
+// ===== 初始化 Lucide =====
+lucide.createIcons();
 
-  const captureRef = useRef(null);
-  const [draggedIdx, setDraggedIdx] = useState(null);
+// ===== 幹部欄位初始化 =====
+const officersGrid = document.getElementById('officersGrid');
+OFFICERS.forEach((title, i) => {
+  const div = document.createElement('div');
+  div.innerHTML = `<div class="text-[9px] text-gray-400 ml-1 font-bold mb-0.5">${title}</div>
+    <input type="text" id="officer_${i}" class="w-full p-1.5 border rounded text-xs" placeholder="${title}"/>`;
+  officersGrid.appendChild(div);
+});
 
-  // --- 動態載入 HTML2Canvas ---
-  const getHtml2Canvas = () => {
-    return new Promise((resolve) => {
-      if (window.html2canvas) {
-        resolve(window.html2canvas);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = "https://html2canvas.hertzen.com/dist/html2canvas.min.js";
-      script.onload = () => resolve(window.html2canvas);
-      document.head.appendChild(script);
+// ===== 網格初始化 =====
+function initLayout() {
+  const count = cols * rows;
+  const prev = [...layout];
+  layout = Array.from({length: count}, (_, i) => prev[i] || {no:'', name:'', fixed:false});
+}
+
+function renderGrid() {
+  const grid = document.getElementById('seatGrid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.innerHTML = '';
+  layout.forEach((seat, i) => {
+    const div = document.createElement('div');
+    div.className = `seat border-2 border-black flex flex-col relative group ${seat.fixed ? 'bg-yellow-50' : 'bg-white'}`;
+    div.style.aspectRatio = '1/0.85';
+    div.draggable = !!seat.name;
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <div class="h-[28%] border-b-2 border-black flex items-center justify-center text-[10px] font-bold bg-slate-100">${seat.no}</div>
+      <div class="flex-1 flex items-center justify-center font-black overflow-hidden px-1" style="font-size:clamp(10px,2vw,20px)">${seat.name}</div>
+      <button class="lock-btn absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print ${seat.fixed?'text-amber-500':'text-slate-300'}" data-idx="${i}">
+        ${seat.fixed ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+          : '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>'}
+      </button>`;
+    div.addEventListener('click', (e) => {
+      if (e.target.closest('.lock-btn')) return;
+      openModal(i);
     });
-  };
-
-  // --- 身分驗證 Effect ---
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsubscribe();
-  }, []);
-
-  // --- 資料同步 Effect ---
-  useEffect(() => {
-    if (!user) return;
-    const q = collection(db, 'artifacts', appId, 'users', user.uid, 'classes');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const classes = [];
-      snapshot.forEach(doc => classes.push({ id: doc.id, ...doc.data() }));
-      setSavedClasses(classes);
-    }, (err) => console.error("Firestore error:", err));
-    return () => unsubscribe();
-  }, [user]);
-
-  // --- 網格初始化 Effect ---
-  useEffect(() => {
-    const count = cols * rows;
-    setLayout(prev => {
-      const newLayout = Array.from({ length: count }, (_, i) => 
-        prev[i] || { no: '', name: '', fixed: false }
-      );
-      return newLayout.slice(0, count);
+    div.querySelector('.lock-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      layout[i].fixed = !layout[i].fixed;
+      renderGrid();
     });
-  }, [cols, rows]);
-
-  // --- 功能操作 ---
-  const handleShuffle = () => {
-    const students = studentListRaw.split('\n')
-      .filter(line => line.trim())
-      .map(line => {
-        const parts = line.trim().split(/\s+/);
-        return { no: parts[0] || '', name: parts.slice(1).join(' ') || '' };
-      })
-      .sort(() => Math.random() - 0.5);
-
-    const newLayout = [...layout];
-    let studentIdx = 0;
-    
-    newLayout.forEach((seat, i) => {
-      if (!seat.fixed) {
-        if (studentIdx < students.length) {
-          newLayout[i] = { ...seat, no: students[studentIdx].no, name: students[studentIdx].name };
-          studentIdx++;
-        } else {
-          newLayout[i] = { ...seat, no: '', name: '' };
-        }
-      }
+    div.addEventListener('dragstart', (e) => {
+      draggedIdx = i;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => div.classList.add('dragging'), 0);
     });
-    setLayout(newLayout);
-  };
+    div.addEventListener('dragend', () => div.classList.remove('dragging'));
+    div.addEventListener('dragover', (e) => { e.preventDefault(); div.classList.add('drag-over'); });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', (e) => {
+      e.preventDefault();
+      div.classList.remove('drag-over');
+      if (draggedIdx === null || draggedIdx === i) return;
+      const tmp = {...layout[draggedIdx]};
+      layout[draggedIdx] = {...layout[i]};
+      layout[i] = tmp;
+      draggedIdx = null;
+      renderGrid();
+    });
+    grid.appendChild(div);
+  });
+  renderOfficersTable();
+  renderNameList();
+}
 
-  const resetAll = () => {
-    if(!confirm("確定要重設所有欄位嗎？這將清空目前所有編輯內容。")) return;
-    setClassTitle('113學年度 某某班 座位表');
-    setStudentListRaw('');
-    setMemo('');
-    setOfficers(Array(OFFICERS.length).fill(''));
-    setLayout(layout.map(s => ({ no: '', name: '', fixed: false })));
-  };
+function renderOfficersTable() {
+  const table = document.getElementById('officersTable');
+  table.innerHTML = '';
+  OFFICERS.forEach((title, i) => {
+    const val = document.getElementById(`officer_${i}`)?.value || '';
+    const cell = document.createElement('div');
+    cell.className = 'border-r-[3px] border-b-[3px] border-black p-1.5 text-center bg-white';
+    cell.innerHTML = `<div class="text-[9px] font-bold text-gray-400">${title}</div>
+      <div class="text-sm font-bold truncate">${val}</div>`;
+    table.appendChild(cell);
+  });
+}
 
-  const saveToCloud = async () => {
-    if (!user || !classTitle.trim()) return alert("請輸入班級名稱");
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'classes', classTitle), {
-        title: classTitle,
-        cols,
-        rows,
-        studentListRaw,
-        memo,
-        officers,
-        layout,
-        updatedAt: Date.now()
-      });
-      alert("儲存成功！");
-    } catch (err) {
-      alert("儲存失敗: " + err.message);
+function renderNameList() {
+  const el = document.getElementById('nameList');
+  const raw = document.getElementById('studentList').value;
+  el.innerHTML = raw.split('\n').filter(l=>l.trim()).map(l =>
+    `<div class="border-b border-slate-200 py-0.5 truncate">${l}</div>`
+  ).join('');
+}
+
+// ===== 動態更新標題/備註預覽 =====
+document.getElementById('classTitle').addEventListener('input', e => {
+  document.getElementById('previewTitle').textContent = e.target.value;
+});
+document.getElementById('memoInput').addEventListener('input', e => {
+  document.getElementById('memoDisplay').innerHTML = `<span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>${e.target.value || '暫無說明事項。'}`;
+});
+document.getElementById('studentList').addEventListener('input', () => { renderNameList(); });
+OFFICERS.forEach((_, i) => {
+  document.getElementById(`officer_${i}`)?.addEventListener('input', renderOfficersTable);
+});
+document.getElementById('colsInput').addEventListener('change', e => {
+  cols = Math.max(1, parseInt(e.target.value)||1);
+  initLayout(); renderGrid();
+});
+document.getElementById('rowsInput').addEventListener('change', e => {
+  rows = Math.max(1, parseInt(e.target.value)||1);
+  initLayout(); renderGrid();
+});
+
+// ===== Modal =====
+function openModal(idx) {
+  editingIdx = idx;
+  const seat = layout[idx];
+  document.getElementById('modalSeatNum').textContent = `#${idx+1}`;
+  document.getElementById('modalNo').value = seat.no;
+  document.getElementById('modalName').value = seat.name;
+  document.getElementById('modalFixed').checked = seat.fixed;
+  document.getElementById('seatModal').classList.remove('hidden');
+}
+document.getElementById('modalCancel').onclick = () => document.getElementById('seatModal').classList.add('hidden');
+document.getElementById('modalSave').onclick = () => {
+  if (editingIdx === null) return;
+  layout[editingIdx] = {
+    no: document.getElementById('modalNo').value,
+    name: document.getElementById('modalName').value,
+    fixed: document.getElementById('modalFixed').checked
+  };
+  document.getElementById('seatModal').classList.add('hidden');
+  renderGrid();
+};
+
+// ===== 隨機排位 =====
+document.getElementById('shuffleBtn').onclick = () => {
+  const students = document.getElementById('studentList').value.split('\n')
+    .filter(l=>l.trim()).map(l => {
+      const p = l.trim().split(/\s+/);
+      return {no: p[0]||'', name: p.slice(1).join(' ')||''};
+    }).sort(() => Math.random()-0.5);
+  let si = 0;
+  layout.forEach((seat, i) => {
+    if (!seat.fixed) {
+      if (si < students.length) {
+        layout[i] = {...seat, no: students[si].no, name: students[si].name};
+        si++;
+      } else {
+        layout[i] = {...seat, no:'', name:''};
+      }
     }
-  };
+  });
+  renderGrid();
+};
 
-  const loadFromCloud = () => {
-    const data = savedClasses.find(c => c.id === selectedClassId);
-    if (!data) return;
-    setClassTitle(data.title);
-    setCols(data.cols);
-    setRows(data.rows);
-    setStudentListRaw(data.studentListRaw);
-    setMemo(data.memo || '');
-    setOfficers(data.officers || Array(OFFICERS.length).fill(''));
-    setLayout(data.layout);
-  };
+// ===== 重設 =====
+document.getElementById('resetBtn').onclick = () => {
+  if (!confirm('確定要重設所有欄位？')) return;
+  document.getElementById('classTitle').value = '113學年度 某某班 座位表';
+  document.getElementById('previewTitle').textContent = '113學年度 某某班 座位表';
+  document.getElementById('studentList').value = '';
+  document.getElementById('memoInput').value = '';
+  document.getElementById('memoDisplay').innerHTML = `<span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>暫無說明事項。`;
+  OFFICERS.forEach((_,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=''; });
+  layout = layout.map(s => ({no:'', name:'', fixed:false}));
+  renderGrid();
+};
 
-  const exportImage = async () => {
-    if (!captureRef.current) return;
-    setLoading(true);
-    const h2c = await getHtml2Canvas();
-    const canvas = await h2c(captureRef.current, { 
-      scale: 2, 
-      useCORS: true,
-      backgroundColor: "#ffffff"
+// ===== 匯出圖片 =====
+document.getElementById('exportBtn').onclick = async () => {
+  const btn = document.getElementById('exportBtn');
+  btn.textContent = '匯出中...';
+  const script = document.createElement('script');
+  script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+  script.onload = async () => {
+    const canvas = await html2canvas(document.getElementById('captureArea'), {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff'
     });
     const link = document.createElement('a');
-    link.download = `座位表_${classTitle}.png`;
+    link.download = `座位表_${document.getElementById('classTitle').value}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    setLoading(false);
+    btn.innerHTML = '<i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)';
+    lucide.createIcons();
   };
+  document.head.appendChild(script);
+};
 
-  // --- 拖曳交換邏輯 ---
-  const handleDragStart = (e, idx) => {
-    setDraggedIdx(idx);
-    e.dataTransfer.setData('text/plain', idx);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+// ===== 密碼顯示切換 =====
+document.getElementById('togglePwd').onclick = () => {
+  const inp = document.getElementById('passwordInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+};
 
-  const handleDrop = (e, targetIdx) => {
-    e.preventDefault();
-    if (draggedIdx === null || draggedIdx === targetIdx) return;
-    const newLayout = [...layout];
-    const temp = { ...newLayout[draggedIdx] };
-    newLayout[draggedIdx] = { ...newLayout[targetIdx] };
-    newLayout[targetIdx] = temp;
-    setLayout(newLayout);
-    setDraggedIdx(null);
-  };
-
-  if (!user) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl font-sans text-center">
-          <h2 className="text-2xl font-bold mb-6 text-slate-800">座位安排系統</h2>
-          <button onClick={() => setAuthMode('login')} className="bg-blue-600 text-white w-full py-3 rounded-lg font-bold hover:bg-blue-700">點此進入系統</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
-      {/* 側邊編輯區 */}
-      <aside className="w-[360px] bg-white border-r shadow-lg overflow-y-auto flex flex-col no-print z-10">
-        <div className="p-4 bg-slate-800 text-white flex justify-between items-center sticky top-0 z-20">
-          <h1 className="text-lg font-bold">控制面版</h1>
-          <button onClick={() => signOut(auth)} className="p-2 hover:bg-slate-700 rounded-full transition"><LogOut size={18} /></button>
-        </div>
-
-        <div className="p-4 space-y-6">
-          {/* 雲端功能 */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-            <h3 className="font-bold text-xs flex items-center gap-2 text-slate-600 uppercase tracking-wider">Cloud Storage</h3>
-            <select className="w-full p-2 border rounded-md text-xs bg-white" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
-              <option value="">-- 選擇存檔 --</option>
-              {savedClasses.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
-            </select>
-            <div className="flex gap-2">
-              <button onClick={loadFromCloud} className="flex-1 bg-green-600 text-white py-2 rounded-md text-xs font-bold hover:bg-green-700 transition">載入</button>
-              <button onClick={saveToCloud} className="flex-1 bg-violet-600 text-white py-2 rounded-md text-xs font-bold flex items-center justify-center gap-1 hover:bg-violet-700 transition"><Save size={14}/>儲存</button>
-            </div>
-          </div>
-
-          {/* 基本設定 */}
-          <div className="space-y-3">
-            <h3 className="font-bold border-b pb-1 text-slate-700 text-xs uppercase tracking-wider">班級設定</h3>
-            <input type="text" className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="班級全稱" value={classTitle} onChange={e => setClassTitle(e.target.value)} />
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="text-[10px] block text-gray-500 mb-1">欄數 (寬)</label>
-                <input type="number" className="w-full p-2 border rounded text-center text-sm" value={cols} onChange={e => setCols(Math.max(1, parseInt(e.target.value)||1))} />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] block text-gray-500 mb-1">列數 (深)</label>
-                <input type="number" className="w-full p-2 border rounded text-center text-sm" value={rows} onChange={e => setRows(Math.max(1, parseInt(e.target.value)||1))} />
-              </div>
-            </div>
-            <label className="text-[10px] block text-gray-500">學生名單 (格式: 座號 姓名，一列一位)</label>
-            <textarea className="w-full p-2 border rounded text-xs h-32 leading-tight font-mono" placeholder="01 王小明" value={studentListRaw} onChange={e => setStudentListRaw(e.target.value)} />
-            <button onClick={handleShuffle} className="w-full bg-blue-600 text-white py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-sm transition">
-              <Shuffle size={16}/> 隨機排位 (保留鎖定)
-            </button>
-          </div>
-
-          {/* 幹部名單編輯 */}
-          <div className="space-y-2">
-            <h3 className="font-bold text-xs text-slate-700 uppercase tracking-wider">幹部資料</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {OFFICERS.map((title, i) => (
-                <div key={i}>
-                  <span className="text-[9px] text-gray-400 ml-1 font-bold">{title}</span>
-                  <input type="text" className="w-full p-1.5 border rounded text-xs" value={officers[i]} onChange={e => {
-                    const n = [...officers]; n[i] = e.target.value; setOfficers(n);
-                  }}/>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 備註說明編輯 */}
-          <div className="space-y-1">
-            <h3 className="font-bold text-xs text-slate-700 uppercase tracking-wider">備註事項內容</h3>
-            <textarea className="w-full p-2 border rounded text-xs h-24" placeholder="導師說明文字..." value={memo} onChange={e => setMemo(e.target.value)} />
-          </div>
-
-          <div className="space-y-2 pt-2 pb-10">
-            <button onClick={exportImage} disabled={loading} className="w-full bg-amber-500 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-amber-600 transition text-sm shadow">
-              <Camera size={18}/> {loading ? '匯出中...' : '匯出圖片 (PNG)'}
-            </button>
-            <button onClick={resetAll} className="w-full bg-red-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 text-sm transition">
-              <RotateCcw size={16}/> 重設所有欄位
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* 預覽畫布 (A4) */}
-      <main className="flex-1 overflow-auto bg-slate-500 p-8 flex justify-center">
-        <div ref={captureRef} className="w-[820px] min-h-[1160px] bg-white shadow-2xl p-[50px] flex flex-col relative text-black font-sans box-border">
-          {/* 標題區 */}
-          <h1 className="text-center text-4xl font-extrabold pb-3 mb-10 border-b-[3px] border-black tracking-[0.2em]">{classTitle}</h1>
-          
-          {/* 講桌 */}
-          <div className="flex justify-center mb-10">
-            <div className="w-64 h-14 border-[3px] border-black flex items-center justify-center font-bold text-2xl bg-slate-50 shadow-sm">講　桌</div>
-          </div>
-          
-          {/* 中間區塊：座位表 + 側邊名條 */}
-          <div className="flex flex-1 gap-8 min-h-0">
-            {/* 座位區塊 (左側) */}
-            <div className="flex-1 flex flex-col gap-8">
-              {/* 座位網格 */}
-              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, alignContent: 'start' }}>
-                {layout.map((seat, i) => (
-                  <div 
-                    key={i} 
-                    draggable={!!seat.name}
-                    onDragStart={(e) => handleDragStart(e, i)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleDrop(e, i)}
-                    className={`border-2 border-black flex flex-col relative group transition-all duration-200 ${seat.fixed ? 'bg-yellow-50' : 'bg-white'} ${draggedIdx === i ? 'opacity-30' : ''} ${seat.name ? 'cursor-grab active:cursor-grabbing' : ''} hover:border-blue-500 hover:shadow-lg`} 
-                    style={{ aspectRatio: '1/0.9' }} 
-                    onClick={() => setEditingSeat({ idx: i, ...seat })}
-                  >
-                    <div className="h-[30%] border-b-2 border-black flex items-center justify-center text-xs font-bold bg-slate-100">{seat.no}</div>
-                    <div className="flex-1 flex items-center justify-center text-2xl font-black truncate px-1">{seat.name}</div>
-                    
-                    <div className="absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print">
-                      <button onClick={(e) => {
-                        e.stopPropagation();
-                        const n = [...layout]; n[i].fixed = !n[i].fixed; setLayout(n);
-                      }} className={seat.fixed ? 'text-amber-600' : 'text-slate-300'}>
-                        {seat.fixed ? <Lock size={14}/> : <Unlock size={14}/>}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 幹部名單區塊 (座位正下方) */}
-              <div className="mt-auto">
-                <div className="grid grid-cols-6 border-t-[3px] border-l-[3px] border-black">
-                  {OFFICERS.map((title, i) => (
-                    <div key={i} className="border-r-[3px] border-b-[3px] border-black p-2 text-center min-h-[50px] flex flex-col justify-center bg-white">
-                      <div className="text-[10px] font-bold text-gray-500 mb-1">{title}</div>
-                      <div className="text-base font-bold truncate leading-tight">{officers[i]}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 右側：班級名條 (座號名單) */}
-            <div className="w-28 border-[3px] border-black flex flex-col overflow-hidden self-stretch bg-white">
-              <div className="bg-black text-white text-center py-2 font-bold text-xs tracking-widest">座號名單</div>
-              <div className="flex-1 p-1.5 text-[10px] leading-relaxed font-bold overflow-hidden">
-                {studentListRaw.split('\n').filter(l => l.trim()).map((l, i) => (
-                   <div key={i} className="border-b border-slate-200 py-1 truncate">{l}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 底部：導師備註說明區 (全寬) */}
-          <div className="mt-8">
-            <div className="border-[3px] border-black p-6 min-h-[160px] text-lg leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium">
-               <span className="absolute -top-3.5 left-5 bg-white px-3 text-xs font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>
-               {memo || "暫無說明事項。"}
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* 座位編輯 Modal */}
-      {editingSeat && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs space-y-5 animate-in fade-in zoom-in duration-200">
-            <h3 className="font-bold border-b pb-2 flex justify-between text-slate-800 text-lg">編輯座位 <span>#{editingSeat.idx + 1}</span></h3>
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 block mb-1 uppercase">座號</label>
-                <input type="text" className="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none transition-all font-bold" value={editingSeat.no} onChange={e => setEditingSeat({...editingSeat, no: e.target.value})} />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 block mb-1 uppercase">學生姓名</label>
-                <input type="text" className="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none transition-all font-bold text-lg" value={editingSeat.name} onChange={e => setEditingSeat({...editingSeat, name: e.target.value})} />
-              </div>
-              <div className="flex items-center gap-3 text-sm pt-2 bg-slate-50 p-3 rounded-lg border">
-                <input type="checkbox" id="fixed-check" className="w-5 h-5 cursor-pointer accent-blue-600" checked={editingSeat.fixed} onChange={e => setEditingSeat({...editingSeat, fixed: e.target.checked})} />
-                <label htmlFor="fixed-check" className="font-bold cursor-pointer text-slate-700">鎖定此位置</label>
-              </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setEditingSeat(null)} className="flex-1 py-3 bg-slate-100 rounded-xl text-sm font-bold hover:bg-slate-200 transition text-slate-600">取消</button>
-              <button onClick={() => {
-                const n = [...layout]; n[editingSeat.idx] = { no: editingSeat.no, name: editingSeat.name, fixed: editingSeat.fixed };
-                setLayout(n); setEditingSeat(null);
-              }} className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">儲存</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @media print { .no-print { display: none !important; } }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      `}</style>
-    </div>
-  );
+// ===== 身份驗證 =====
+function showError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.classList.remove('hidden');
 }
+document.getElementById('loginBtn').onclick = async () => {
+  const email = document.getElementById('emailInput').value;
+  const pwd = document.getElementById('passwordInput').value;
+  if (!email || !pwd) return showError('請填寫帳號與密碼');
+  try { await signInWithEmailAndPassword(auth, email, pwd); }
+  catch(e) { showError('登入失敗：' + (e.code === 'auth/invalid-credential' ? '帳號或密碼錯誤' : e.message)); }
+};
+document.getElementById('registerBtn').onclick = async () => {
+  const email = document.getElementById('emailInput').value;
+  const pwd = document.getElementById('passwordInput').value;
+  if (!email || !pwd) return showError('請填寫帳號與密碼');
+  if (pwd.length < 6) return showError('密碼至少需要 6 個字元');
+  try { await createUserWithEmailAndPassword(auth, email, pwd); }
+  catch(e) { showError('註冊失敗：' + e.message); }
+};
+document.getElementById('anonBtn').onclick = async () => {
+  try { await signInAnonymously(auth); }
+  catch(e) { showError('進入失敗：' + e.message); }
+};
+document.getElementById('logoutBtn').onclick = () => signOut(auth);
+
+// ===== Auth 狀態監聽 =====
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('flex');
+    document.getElementById('userEmail').textContent = user.isAnonymous ? '訪客' : user.email;
+
+    if (!user.isAnonymous) {
+      document.getElementById('cloudSection').classList.remove('opacity-40', 'pointer-events-none');
+      // 監聽存檔
+      const q = collection(db, 'seatapp', user.uid, 'classes');
+      onSnapshot(q, (snap) => {
+        savedClasses = [];
+        snap.forEach(d => savedClasses.push({id: d.id, ...d.data()}));
+        const sel = document.getElementById('savedClassSelect');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">-- 選擇存檔 --</option>';
+        savedClasses.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id; opt.textContent = c.id;
+          sel.appendChild(opt);
+        });
+        sel.value = cur;
+      });
+    } else {
+      document.getElementById('cloudSection').classList.add('opacity-40', 'pointer-events-none');
+    }
+
+    initLayout();
+    renderGrid();
+    lucide.createIcons();
+  } else {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('flex');
+  }
+});
+
+// ===== 雲端儲存 =====
+document.getElementById('saveBtn').onclick = async () => {
+  if (!currentUser || currentUser.isAnonymous) return;
+  const title = document.getElementById('classTitle').value.trim();
+  if (!title) return alert('請輸入班級名稱');
+  const officers = OFFICERS.map((_,i) => document.getElementById(`officer_${i}`)?.value||'');
+  try {
+    await setDoc(doc(db, 'seatapp', currentUser.uid, 'classes', title), {
+      title, cols, rows,
+      studentListRaw: document.getElementById('studentList').value,
+      memo: document.getElementById('memoInput').value,
+      officers, layout,
+      updatedAt: Date.now()
+    });
+    alert('儲存成功！');
+  } catch(e) { alert('儲存失敗：' + e.message); }
+};
+
+// ===== 載入存檔 =====
+document.getElementById('loadBtn').onclick = () => {
+  const id = document.getElementById('savedClassSelect').value;
+  const data = savedClasses.find(c => c.id === id);
+  if (!data) return alert('請選擇存檔');
+  document.getElementById('classTitle').value = data.title;
+  document.getElementById('previewTitle').textContent = data.title;
+  cols = data.cols; rows = data.rows;
+  document.getElementById('colsInput').value = cols;
+  document.getElementById('rowsInput').value = rows;
+  document.getElementById('studentList').value = data.studentListRaw || '';
+  document.getElementById('memoInput').value = data.memo || '';
+  document.getElementById('memoDisplay').innerHTML = `<span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>${data.memo || '暫無說明事項。'}`;
+  (data.officers||[]).forEach((v,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=v; });
+  layout = data.layout || [];
+  renderGrid();
+  renderNameList();
+};
+
+</script>
+</body>
+</html>

@@ -90,7 +90,7 @@
       <!-- 班級設定 -->
       <div class="space-y-3">
         <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider border-b pb-1">班級設定</h3>
-        <input id="classTitle" type="text" value="113學年度 資二甲 座位表" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none"/>
+        <input id="classTitle" type="text" value="114學年度 資二甲 座位表" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none"/>
         <div class="flex gap-3">
           <div class="flex-1">
             <label class="text-[10px] text-slate-400 block mb-1">欄數（左右，最多7）</label>
@@ -152,7 +152,7 @@
       <div class="flex gap-4 flex-1 min-h-0">
         
         <!-- 左側：排版區 -->
-        <div class="flex-1 flex flex-col gap-5 min-w-0">
+        <div class="flex-1 flex flex-col gap-3 min-w-0">
           
           <!-- 座位格 -->
           <div id="seatGrid" class="grid gap-2 shrink-0"></div>
@@ -160,9 +160,9 @@
           <!-- 幹部表 (擴充為 7 欄，共 14 格) -->
           <div id="officersTable" class="grid grid-cols-7 border-t-[3px] border-l-[3px] border-black mt-auto shrink-0"></div>
 
-          <!-- 備註區 (文字放大至 text-[19px]) -->
-          <div id="memoDisplay" class="border-[3px] border-black p-4 pt-5 min-h-[85px] text-[19px] leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
-            <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
+          <!-- 備註區 (縮減高度、調整 padding 避免文字偏下) -->
+          <div id="memoDisplay" class="border-[2px] border-black p-3 min-h-[55px] text-[18px] leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
+            <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[2px] border-black">導師備註說明區</span>
             暫無說明事項。
           </div>
         </div>
@@ -188,7 +188,7 @@
     <h3 class="font-bold border-b pb-2 flex justify-between text-slate-800">編輯座位 <span id="modalSeatNum" class="text-slate-400">#1</span></h3>
     <div>
       <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">座號</label>
-      <input id="modalNo" type="text" class="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none font-bold"/>
+      <input id="modalNo" type="text" class="w-full p-2 border-21 rounded-lg focus:border-blue-500 outline-none font-bold"/>
     </div>
     <div>
       <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">學生姓名</label>
@@ -284,7 +284,7 @@ function renderGrid() {
     const div = document.createElement('div');
     div.className = `seat border-2 border-black flex flex-col relative group ${seat.fixed ? 'bg-yellow-50' : 'bg-white'}`;
     // 微調寬高比，讓 7 列時有更好的伸縮空間
-    div.style.aspectRatio = '1/0.85';
+    div.style.aspectRatio = '1/0.82';
     div.draggable = !!seat.name;
     div.dataset.idx = i;
     
@@ -341,7 +341,7 @@ function renderOfficersTable() {
     const val = document.getElementById(`officer_${i}`)?.value || '';
     const cell = document.createElement('div');
     // 增加 min-h，並移除 truncate，改用 break-words 與 leading-snug 確保姓名不被砍腳
-    cell.className = 'border-r-[3px] border-b-[3px] border-black p-2 min-h-[65px] text-center bg-white flex flex-col items-center justify-center gap-1.5';
+    cell.className = 'border-r-[3px] border-b-[3px] border-black p-1.5 min-h-[55px] text-center bg-white flex flex-col items-center justify-center gap-1';
     cell.innerHTML = `
       <div class="text-[11px] font-bold text-gray-500 leading-snug">${title}</div>
       <div class="text-[15px] font-bold w-full leading-snug break-words">${val}</div>`;

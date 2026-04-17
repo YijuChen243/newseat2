@@ -90,7 +90,7 @@
       <!-- 班級設定 -->
       <div class="space-y-3">
         <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider border-b pb-1">班級設定</h3>
-        <input id="classTitle" type="text" value="114學年度 資二甲 座位表" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none"/>
+        <input id="classTitle" type="text" value="113學年度 資二甲 座位表" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none"/>
         <div class="flex gap-3">
           <div class="flex-1">
             <label class="text-[10px] text-slate-400 block mb-1">欄數（左右，最多7）</label>
@@ -120,15 +120,15 @@
         <textarea id="memoInput" rows="4" class="w-full p-2 border rounded text-xs" placeholder="說明事項..."></textarea>
       </div>
 
-      <!-- 操作按鈕 -->
+      <!-- 操作按鈕 (顏色大升級：馬卡龍色系增強對比，防誤按) -->
       <div class="space-y-2 pt-1">
-        <button id="exportBtn" class="w-full bg-amber-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-amber-600 transition text-sm">
+        <button id="exportBtn" class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-sky-600 transition shadow-sm text-sm">
           <i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)
         </button>
-        <button id="exportPdfBtn" class="w-full bg-rose-600 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-rose-700 transition text-sm">
+        <button id="exportPdfBtn" class="w-full bg-emerald-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition shadow-sm text-sm">
           <i data-lucide="file-text" class="w-4 h-4"></i>匯出 A4 PDF
         </button>
-        <button id="resetBtn" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition text-sm">
+        <button id="resetBtn" class="w-full bg-rose-500 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-rose-600 transition shadow-sm text-sm">
           <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>重設所有欄位
         </button>
       </div>
@@ -145,7 +145,9 @@
 
       <!-- 講桌 -->
       <div class="flex justify-center mb-6 shrink-0">
-        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50">講　桌  👨‍🏫</div>
+        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50">
+          <span class="relative -top-[5px]">講　桌  👨‍🏫</span>
+        </div>
       </div>
 
       <!-- 下方主內容區 (左側：座位+幹部+備註，右側：名單拉長至底部) -->
@@ -160,16 +162,20 @@
           <!-- 幹部表 (擴充為 7 欄，共 14 格) -->
           <div id="officersTable" class="grid grid-cols-7 border-t-[3px] border-l-[3px] border-black mt-auto shrink-0"></div>
 
-          <!-- 備註區 (縮減高度、調整 padding 避免文字偏下) -->
-          <div id="memoDisplay" class="border-[2px] border-black p-3 min-h-[55px] text-[18px] leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
-            <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[2px] border-black">導師備註說明區</span>
-            暫無說明事項。
+          <!-- 備註區 -->
+          <div id="memoDisplay" class="border-[2px] border-black px-3 pt-0 pb-1 min-h-[40px] mt-5 text-[18px] leading-snug whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
+            <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+              <span class="relative -top-[2px]">備註說明區</span>
+            </span>
+            <div class="relative -top-[12px]">暫無說明事項。</div>
           </div>
         </div>
 
         <!-- 右側：名單 (直達底部，充足空間) -->
         <div class="w-[105px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
-          <div class="bg-black text-white text-center py-1.5 font-bold text-[13px] tracking-widest shrink-0">座號名單</div>
+          <div class="bg-black text-white text-center py-1.5 font-bold text-[13px] tracking-widest shrink-0">
+            <span class="relative -top-[2px]">座號名單</span>
+          </div>
           <div id="nameList" class="flex-1 p-1 font-bold overflow-hidden flex flex-col gap-[1px]"></div>
         </div>
       </div>
@@ -188,7 +194,7 @@
     <h3 class="font-bold border-b pb-2 flex justify-between text-slate-800">編輯座位 <span id="modalSeatNum" class="text-slate-400">#1</span></h3>
     <div>
       <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">座號</label>
-      <input id="modalNo" type="text" class="w-full p-2 border-21 rounded-lg focus:border-blue-500 outline-none font-bold"/>
+      <input id="modalNo" type="text" class="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none font-bold"/>
     </div>
     <div>
       <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">學生姓名</label>
@@ -288,13 +294,13 @@ function renderGrid() {
     div.draggable = !!seat.name;
     div.dataset.idx = i;
     
-    // 移除多餘的 div，直接在 Flex 容器加上 leading-none (單行高)，達到最精準的數學垂直置中
+    // 改用 relative 與 -top 來精準控制向上的偏移量，強制抵銷 html2canvas 匯出時文字下沉的誤差
     div.innerHTML = `
-      <div class="h-[30%] border-b-2 border-black flex items-center justify-center bg-slate-100 font-bold leading-none text-center" style="font-size:${noFontSize}">
-        ${seat.no}
+      <div class="h-[30%] border-b-2 border-black flex items-center justify-center bg-slate-100 font-bold text-center">
+        <span class="relative -top-[5px]" style="font-size:${noFontSize}">${seat.no}</span>
       </div>
-      <div class="h-[70%] flex items-center justify-center px-1 overflow-hidden font-black leading-none text-center whitespace-nowrap" style="font-size:${nameFontSize}">
-        ${seat.name}
+      <div class="h-[70%] flex items-center justify-center px-1 overflow-hidden font-black text-center whitespace-nowrap">
+        <span class="relative -top-[8px]" style="font-size:${nameFontSize}">${seat.name}</span>
       </div>
       <button class="lock-btn absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print ${seat.fixed?'text-amber-500':'text-slate-300'}" data-idx="${i}" style="z-index: 10;" data-html2canvas-ignore="true">
         ${seat.fixed ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
@@ -342,9 +348,11 @@ function renderOfficersTable() {
     const cell = document.createElement('div');
     // 增加 min-h，並移除 truncate，改用 break-words 與 leading-snug 確保姓名不被砍腳
     cell.className = 'border-r-[3px] border-b-[3px] border-black p-1.5 min-h-[55px] text-center bg-white flex flex-col items-center justify-center gap-1';
+    
+    // 在 title (幹部名稱) 與 val (學生姓名) 外面包上 span 並加上向上推力
     cell.innerHTML = `
-      <div class="text-[11px] font-bold text-gray-500 leading-snug">${title}</div>
-      <div class="text-[15px] font-bold w-full leading-snug break-words">${val}</div>`;
+      <div class="text-[11px] font-bold text-gray-500 leading-snug"><span class="relative -top-[4px]">${title}</span></div>
+      <div class="text-[15px] font-bold w-full leading-snug break-words"><span class="relative -top-[4px]">${val}</span></div>`;
     table.appendChild(cell);
   });
 }
@@ -357,7 +365,7 @@ function renderNameList() {
     // 智慧拆分：不管是空白或 Excel 複製來的 Tab (跳格) 都能完美解析
     const p = l.trim().split(/\s+/);
     const str = p[0] + (p.length > 1 ? ' ' + p.slice(1).join(' ') : '');
-    return `<div class="border-b border-slate-200 py-[3px] px-1 truncate text-center text-[13px] leading-tight">${str}</div>`;
+    return `<div class="border-b border-slate-200 py-[3px] px-1 truncate text-center text-[13px] leading-tight"><span class="relative -top-[2px]">${str}</span></div>`;
   }).join('');
 }
 
@@ -367,8 +375,10 @@ document.getElementById('classTitle').addEventListener('input', e => {
 });
 document.getElementById('memoInput').addEventListener('input', e => {
   document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
-    ${e.target.value || '暫無說明事項。'}
+    <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+      <span class="relative -top-[2px]">備註說明區</span>
+    </span>
+    <div class="relative -top-[12px]">${e.target.value || '暫無說明事項。'}</div>
   `;
 });
 
@@ -490,8 +500,10 @@ document.getElementById('resetBtn').onclick = () => {
   document.getElementById('studentList').value = '';
   document.getElementById('memoInput').value = '';
   document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
-    暫無說明事項。
+    <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+      <span class="relative -top-[2px]">備註說明區</span>
+    </span>
+    <div class="relative -top-[12px]">暫無說明事項。</div>
   `;
   OFFICERS.forEach((_,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=''; });
   layout = layout.map(s => ({no:'', name:'', fixed:false}));
@@ -748,8 +760,10 @@ document.getElementById('loadBtn').onclick = () => {
   document.getElementById('studentList').value = data.studentListRaw || '';
   document.getElementById('memoInput').value = data.memo || '';
   document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
-    ${data.memo || '暫無說明事項。'}
+    <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+      <span class="relative -top-[2px]">備註說明區</span>
+    </span>
+    <div class="relative -top-[12px]">${data.memo || '暫無說明事項。'}</div>
   `;
   (data.officers||[]).forEach((v,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=v; });
   layout = data.layout || [];

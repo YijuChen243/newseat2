@@ -91,7 +91,7 @@
         </button>
       </div>
 
-      <!-- 幹部 -->
+      <!-- 幹部 (擴充為 14 個) -->
       <div class="space-y-2">
         <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">幹部資料</h3>
         <div id="officersGrid" class="grid grid-cols-2 gap-2"></div>
@@ -119,42 +119,41 @@
   </aside>
 
   <!-- 預覽區 -->
-  <main class="flex-1 overflow-auto bg-slate-500 p-6 flex justify-center">
-    <div id="captureArea" class="w-[820px] min-w-[820px] bg-white shadow-2xl p-[44px] flex flex-col text-black" style="min-height:1100px">
+  <main class="flex-1 overflow-auto bg-slate-500 p-6 flex justify-center items-start">
+    <!-- 完美 A4 比例容器 (794x1123, 內距 38px 剛好約為 1 公分) -->
+    <div id="captureArea" class="w-[794px] h-[1123px] shrink-0 bg-white shadow-2xl p-[38px] flex flex-col text-black mx-auto overflow-hidden relative">
 
       <!-- 標題 -->
-      <h1 id="previewTitle" class="text-center text-3xl font-black pb-3 mb-8 border-b-[3px] border-black tracking-[0.2em]">113學年度 資二甲 座位表</h1>
+      <h1 id="previewTitle" class="text-center text-3xl font-black pb-3 mb-6 border-b-[3px] border-black tracking-[0.2em] shrink-0">113學年度 資二甲 座位表</h1>
 
       <!-- 講桌 -->
-      <div class="flex justify-center mb-8">
-        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50">講　桌</div>
+      <div class="flex justify-center mb-6 shrink-0">
+        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50">講　桌  👨‍🏫</div>
       </div>
 
-      <!-- 座位區 + 名條 -->
-      <div class="flex gap-6 flex-1">
-        <div class="flex-1 flex flex-col gap-8 min-w-0">
-
+      <!-- 下方主內容區 (左側：座位+幹部+備註，右側：名單拉長至底部) -->
+      <div class="flex gap-4 flex-1 min-h-0">
+        
+        <!-- 左側：排版區 -->
+        <div class="flex-1 flex flex-col gap-5 min-w-0">
+          
           <!-- 座位格 -->
-          <div id="seatGrid" class="grid gap-2"></div>
+          <div id="seatGrid" class="grid gap-2 shrink-0"></div>
 
-          <!-- 幹部表 -->
-          <div class="mt-auto">
-            <div id="officersTable" class="grid grid-cols-6 border-t-[3px] border-l-[3px] border-black"></div>
+          <!-- 幹部表 (擴充為 7 欄，共 14 格) -->
+          <div id="officersTable" class="grid grid-cols-7 border-t-[3px] border-l-[3px] border-black mt-auto shrink-0"></div>
+
+          <!-- 備註區 (文字放大至 text-[19px]) -->
+          <div id="memoDisplay" class="border-[3px] border-black p-4 pt-5 min-h-[85px] text-[19px] leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
+            <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
+            暫無說明事項。
           </div>
         </div>
 
-        <!-- 名條 -->
-        <div class="w-28 border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden">
-          <div class="bg-black text-white text-center py-1.5 font-bold text-xs tracking-widest">座號名單</div>
-          <div id="nameList" class="flex-1 p-1.5 font-bold overflow-hidden" style="font-size:13px;line-height:1.6"></div>
-        </div>
-      </div>
-
-      <!-- 備註區 -->
-      <div class="mt-6">
-        <div id="memoDisplay" class="border-[3px] border-black p-5 min-h-[120px] text-base leading-relaxed whitespace-pre-wrap relative bg-white italic font-medium">
-          <span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>
-          暫無說明事項。
+        <!-- 右側：名單 (直達底部，充足空間) -->
+        <div class="w-[105px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
+          <div class="bg-black text-white text-center py-1.5 font-bold text-[13px] tracking-widest shrink-0">座號名單</div>
+          <div id="nameList" class="flex-1 p-1 font-bold overflow-hidden flex flex-col gap-[1px]"></div>
         </div>
       </div>
     </div>
@@ -203,8 +202,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ===== 常數 =====
-const OFFICERS = ["班長","副班長","風紀","學藝","衛生","體育","總務","環保","輔導","資訊","圖書","服務"];
+// ===== 常數 (擴增為 14 名幹部) =====
+const OFFICERS = ["班長","副班長","風紀","學藝","衛生(內)","衛生(外)","體育","事務","環保","輔導","實習","圖書","康樂","評分員",];
 
 // ===== 狀態 =====
 let layout = [];
@@ -237,19 +236,33 @@ function renderGrid() {
   const grid = document.getElementById('seatGrid');
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.innerHTML = '';
+  
+  // 依照欄數自動調降文字大小，避免 7 欄時太擠
+  const nameFontSize = cols >= 7 ? '14px' : (cols === 6 ? '17px' : '20px');
+  const noFontSize = cols >= 7 ? '12px' : '14px';
+
   layout.forEach((seat, i) => {
     const div = document.createElement('div');
     div.className = `seat border-2 border-black flex flex-col relative group ${seat.fixed ? 'bg-yellow-50' : 'bg-white'}`;
     div.style.aspectRatio = '1/0.85';
     div.draggable = !!seat.name;
     div.dataset.idx = i;
+    
+    // 使用絕對定位 (absolute) 徹底解決 html2canvas 垂直置中跑掉的問題
     div.innerHTML = `
-      <div class="h-[28%] border-b-2 border-black flex items-center justify-center font-bold bg-slate-100" style="font-size:clamp(11px,1.2vw,15px)">${seat.no}</div>
-      <div class="flex-1 flex items-center justify-center font-black overflow-hidden px-1" style="font-size:clamp(12px,2.2vw,24px)">${seat.name}</div>
-      <button class="lock-btn absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print ${seat.fixed?'text-amber-500':'text-slate-300'}" data-idx="${i}">
+      <div class="h-[30%] border-b-2 border-black relative bg-slate-100">
+        <div class="absolute inset-0 flex items-center justify-center font-bold" style="font-size:${noFontSize}">${seat.no}</div>
+      </div>
+      <div class="h-[70%] relative">
+        <div class="absolute inset-0 flex items-center justify-center font-black overflow-hidden px-1 text-center leading-tight whitespace-pre-wrap" style="font-size:${nameFontSize}">
+          <span>${seat.name}</span>
+        </div>
+      </div>
+      <button class="lock-btn absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print ${seat.fixed?'text-amber-500':'text-slate-300'}" data-idx="${i}" style="z-index: 10;" data-html2canvas-ignore="true">
         ${seat.fixed ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
           : '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>'}
       </button>`;
+      
     div.addEventListener('click', (e) => {
       if (e.target.closest('.lock-btn')) return;
       openModal(i);
@@ -289,9 +302,10 @@ function renderOfficersTable() {
   OFFICERS.forEach((title, i) => {
     const val = document.getElementById(`officer_${i}`)?.value || '';
     const cell = document.createElement('div');
-    cell.className = 'border-r-[3px] border-b-[3px] border-black p-2 text-center bg-white';
-    cell.innerHTML = `<div class="text-[11px] font-bold text-gray-400">${title}</div>
-      <div class="text-base font-bold truncate">${val}</div>`;
+    cell.className = 'border-r-[3px] border-b-[3px] border-black p-2 min-h-[60px] text-center bg-white flex flex-col items-center justify-center gap-1.5';
+    cell.innerHTML = `
+      <div class="text-[11px] font-bold text-gray-500 leading-none">${title}</div>
+      <div class="text-[15px] font-bold truncate w-full leading-none">${val}</div>`;
     table.appendChild(cell);
   });
 }
@@ -299,8 +313,9 @@ function renderOfficersTable() {
 function renderNameList() {
   const el = document.getElementById('nameList');
   const raw = document.getElementById('studentList').value;
-  el.innerHTML = raw.split('\n').filter(l=>l.trim()).map(l =>
-    `<div class="border-b border-slate-200 py-0.5 truncate">${l}</div>`
+  const lines = raw.split('\n').filter(l=>l.trim());
+  el.innerHTML = lines.map(l =>
+    `<div class="border-b border-slate-200 py-[3px] px-1 truncate text-center text-[13px] leading-tight">${l}</div>`
   ).join('');
 }
 
@@ -309,7 +324,10 @@ document.getElementById('classTitle').addEventListener('input', e => {
   document.getElementById('previewTitle').textContent = e.target.value;
 });
 document.getElementById('memoInput').addEventListener('input', e => {
-  document.getElementById('memoDisplay').innerHTML = `<span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>${e.target.value || '暫無說明事項。'}`;
+  document.getElementById('memoDisplay').innerHTML = `
+    <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
+    ${e.target.value || '暫無說明事項。'}
+  `;
 });
 document.getElementById('studentList').addEventListener('input', () => { renderNameList(); });
 OFFICERS.forEach((_, i) => {
@@ -372,11 +390,14 @@ document.getElementById('shuffleBtn').onclick = () => {
 // ===== 重設 =====
 document.getElementById('resetBtn').onclick = () => {
   if (!confirm('確定要重設所有欄位？')) return;
-  document.getElementById('classTitle').value = '113學年度 某某班 座位表';
-  document.getElementById('previewTitle').textContent = '113學年度 某某班 座位表';
+  document.getElementById('classTitle').value = '114學年度 某某班 座位表';
+  document.getElementById('previewTitle').textContent = '114學年度 某某班 座位表';
   document.getElementById('studentList').value = '';
   document.getElementById('memoInput').value = '';
-  document.getElementById('memoDisplay').innerHTML = `<span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>暫無說明事項。`;
+  document.getElementById('memoDisplay').innerHTML = `
+    <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
+    暫無說明事項。
+  `;
   OFFICERS.forEach((_,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=''; });
   layout = layout.map(s => ({no:'', name:'', fixed:false}));
   renderGrid();
@@ -385,10 +406,18 @@ document.getElementById('resetBtn').onclick = () => {
 // ===== 匯出圖片 =====
 document.getElementById('exportBtn').onclick = async () => {
   const btn = document.getElementById('exportBtn');
-  btn.textContent = '匯出中...';
-  const script = document.createElement('script');
-  script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
-  script.onload = async () => {
+  btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>匯出中...';
+  lucide.createIcons();
+  
+  await new Promise((res) => {
+    if (window.html2canvas) return res();
+    const script = document.createElement('script');
+    script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+    script.onload = res;
+    document.head.appendChild(script);
+  });
+
+  try {
     const canvas = await html2canvas(document.getElementById('captureArea'), {
       scale: 2, useCORS: true, backgroundColor: '#ffffff'
     });
@@ -396,17 +425,20 @@ document.getElementById('exportBtn').onclick = async () => {
     link.download = `座位表_${document.getElementById('classTitle').value}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+  } catch(e) {
+    alert('圖片匯出失敗：' + e.message);
+  } finally {
     btn.innerHTML = '<i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)';
     lucide.createIcons();
-  };
-  document.head.appendChild(script);
+  }
 };
 
 // ===== 匯出 A4 PDF =====
 document.getElementById('exportPdfBtn').onclick = async () => {
   const btn = document.getElementById('exportPdfBtn');
-  btn.textContent = '產生中...';
-  // 載入 html2canvas
+  btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>產生中...';
+  lucide.createIcons();
+
   await new Promise((res) => {
     if (window.html2canvas) return res();
     const s = document.createElement('script');
@@ -414,7 +446,7 @@ document.getElementById('exportPdfBtn').onclick = async () => {
     s.onload = res;
     document.head.appendChild(s);
   });
-  // 載入 jsPDF
+
   await new Promise((res) => {
     if (window.jspdf) return res();
     const s = document.createElement('script');
@@ -422,36 +454,26 @@ document.getElementById('exportPdfBtn').onclick = async () => {
     s.onload = res;
     document.head.appendChild(s);
   });
+
   try {
     const canvas = await html2canvas(document.getElementById('captureArea'), {
       scale: 2, useCORS: true, backgroundColor: '#ffffff'
     });
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
-    // A4: 210 x 297 mm
+    
+    // 將我們已經等比例設計好的畫布，直接以 1:1 滿版貼上 A4，自帶 10mm 完美留白邊距
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = 210, pageH = 297;
-    const margin = 8;
-    const printW = pageW - margin * 2;
-    const imgH = (canvas.height / canvas.width) * printW;
-    // 若內容超過一頁則分頁
-    if (imgH <= pageH - margin * 2) {
-      const topMargin = (pageH - imgH) / 2;
-      pdf.addImage(imgData, 'PNG', margin, topMargin, printW, imgH);
-    } else {
-      // 縮放至剛好一頁
-      const scaleH = pageH - margin * 2;
-      const scaleW = (canvas.width / canvas.height) * scaleH;
-      const leftMargin = (pageW - scaleW) / 2;
-      pdf.addImage(imgData, 'PNG', leftMargin, margin, scaleW, scaleH);
-    }
+    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    
     const title = document.getElementById('classTitle').value || '座位表';
     pdf.save(`座位表_${title}.pdf`);
   } catch(e) {
     alert('PDF 匯出失敗：' + e.message);
+  } finally {
+    btn.innerHTML = '<i data-lucide="file-text" class="w-4 h-4"></i>匯出 A4 PDF';
+    lucide.createIcons();
   }
-  btn.innerHTML = '<i data-lucide="file-text" class="w-4 h-4"></i>匯出 A4 PDF';
-  lucide.createIcons();
 };
 
 // ===== 密碼顯示切換 =====
@@ -507,7 +529,6 @@ onAuthStateChanged(auth, async (user) => {
 
     if (!user.isAnonymous) {
       document.getElementById('cloudSection').classList.remove('opacity-40', 'pointer-events-none');
-      // 監聽存檔
       const q = collection(db, 'seatapp', user.uid, 'classes');
       onSnapshot(q, (snap) => {
         savedClasses = [];
@@ -537,10 +558,6 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ===== 雲端儲存 =====
-// 注意：Firestore 規則需設定為：
-// match /seatapp/{userId}/classes/{classId} {
-//   allow read, write: if request.auth != null && request.auth.uid == userId;
-// }
 document.getElementById('saveBtn').onclick = async () => {
   if (!currentUser || currentUser.isAnonymous) return alert('請先登入才能使用雲端儲存');
   const title = document.getElementById('classTitle').value.trim();
@@ -573,7 +590,10 @@ document.getElementById('loadBtn').onclick = () => {
   document.getElementById('rowsInput').value = rows;
   document.getElementById('studentList').value = data.studentListRaw || '';
   document.getElementById('memoInput').value = data.memo || '';
-  document.getElementById('memoDisplay').innerHTML = `<span class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest border-2 border-black">導師備註說明區</span>${data.memo || '暫無說明事項。'}`;
+  document.getElementById('memoDisplay').innerHTML = `
+    <span class="absolute -top-[14px] left-4 bg-white px-2 text-[11px] font-black uppercase tracking-widest border-[3px] border-black">導師備註說明區</span>
+    ${data.memo || '暫無說明事項。'}
+  `;
   (data.officers||[]).forEach((v,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=v; });
   layout = data.layout || [];
   renderGrid();

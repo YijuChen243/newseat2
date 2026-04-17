@@ -49,7 +49,7 @@
         <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
       </div>
     </div>
-    <p id="authError" class="text-xs mt-3 text-center hidden"></p>
+    <p id="authError" class="text-xs mt-3 text-center hidden whitespace-pre-wrap"></p>
   </div>
 </div>
 
@@ -164,7 +164,7 @@
 
           <!-- 備註區 -->
           <div id="memoDisplay" class="border-[2px] border-black px-3 pt-0 pb-1 min-h-[40px] mt-5 text-[18px] leading-snug whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
-            <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+            <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
               <span class="relative -top-[2px]">備註說明區</span>
             </span>
             <div class="relative -top-[12px]">暫無說明事項。</div>
@@ -375,7 +375,7 @@ document.getElementById('classTitle').addEventListener('input', e => {
 });
 document.getElementById('memoInput').addEventListener('input', e => {
   document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+    <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
       <span class="relative -top-[2px]">備註說明區</span>
     </span>
     <div class="relative -top-[12px]">${e.target.value || '暫無說明事項。'}</div>
@@ -500,7 +500,7 @@ document.getElementById('resetBtn').onclick = () => {
   document.getElementById('studentList').value = '';
   document.getElementById('memoInput').value = '';
   document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+    <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
       <span class="relative -top-[2px]">備註說明區</span>
     </span>
     <div class="relative -top-[12px]">暫無說明事項。</div>
@@ -603,7 +603,7 @@ document.getElementById('togglePwd').onclick = () => {
 function showMessage(msg, isError = true) {
   const el = document.getElementById('authError');
   el.textContent = msg;
-  el.className = `text-xs mt-3 text-center ${isError ? 'text-red-500' : 'text-green-600'}`;
+  el.className = `text-xs mt-3 text-center ${isError ? 'text-red-500' : 'text-green-600'} whitespace-pre-wrap`;
   el.classList.remove('hidden');
 }
 
@@ -641,7 +641,7 @@ document.getElementById('forgotPwdBtn').onclick = async () => {
   
   try {
     await sendPasswordResetEmail(auth, email);
-    showMessage('✅ 密碼重設信已寄出！請至信箱點擊連結設定新密碼。', false);
+    showMessage('✅ 密碼重設要求已送出！請至信箱檢查（包含「垃圾信件匣」）。\n註：若該信箱尚未註冊，將不會收到信件。', false);
   } catch(e) {
     showMessage('發送重設信失敗：' + e.message, true);
   }
@@ -760,7 +760,7 @@ document.getElementById('loadBtn').onclick = () => {
   document.getElementById('studentList').value = data.studentListRaw || '';
   document.getElementById('memoInput').value = data.memo || '';
   document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[18px] left-4 bg-white px-2 text-[14px] font-black uppercase tracking-widest border-[2px] border-black">
+    <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
       <span class="relative -top-[2px]">備註說明區</span>
     </span>
     <div class="relative -top-[12px]">${data.memo || '暫無說明事項。'}</div>

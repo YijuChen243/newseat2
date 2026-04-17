@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>台東高商班級座位安排系統</title>
+<title>台東高商班級座位安排</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <style>
@@ -17,11 +17,11 @@
 </head>
 <body class="bg-slate-100">
 
-<!-- 登入畫面 -->
+<!-- 登入與註冊畫面 -->
 <div id="authScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-4 z-50">
-  <div class="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+  <div class="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl relative">
     <h2 class="text-2xl font-bold mb-2 text-slate-800 text-center">座位安排系統</h2>
-    <p class="text-xs text-slate-400 text-center mb-6">導師專用</p>
+    <p id="authModeLabel" class="text-xs text-slate-400 text-center mb-6 font-bold">導師專用 - 登入</p>
     <div class="space-y-3">
       <input id="emailInput" type="email" placeholder="電子郵件" class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"/>
       <div class="relative">
@@ -31,9 +31,17 @@
           <span id="eyeOffIcon" style="display:none">🐵</span>
         </button>
       </div>
-      <button id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition text-sm">登入</button>
-      <button id="registerBtn" class="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">註冊新帳號</button>
-      <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
+      
+      <!-- 主操作按鈕 (動態切換登入/註冊) -->
+      <button id="primaryAuthBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition text-sm">登入</button>
+      
+      <!-- 切換模式按鈕 -->
+      <button id="switchAuthModeBtn" class="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">還沒有帳號？註冊新帳號</button>
+      
+      <!-- 訪客登入 -->
+      <div class="text-center pt-2 border-t mt-4 border-slate-100">
+        <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
+      </div>
     </div>
     <p id="authError" class="text-red-500 text-xs mt-3 text-center hidden"></p>
   </div>
@@ -159,7 +167,7 @@
 
       <!-- 版權聲明 (置於 A4 最底部) -->
       <div class="text-center text-[12px] text-gray-400 font-bold mt-4 shrink-0 tracking-widest">
-        設計者By Chen Yiju & AI 
+        設計者By Chen Yiju & AI
       </div>
     </div>
   </main>
@@ -217,6 +225,7 @@ let savedClasses = [];
 let editingIdx = null;
 let draggedIdx = null;
 let currentUser = null;
+let isLoginMode = true; // 新增：控制目前是登入還是註冊模式
 
 // ===== 初始化 Lucide =====
 lucide.createIcons();
@@ -519,26 +528,66 @@ document.getElementById('togglePwd').onclick = () => {
   }
 };
 
-// ===== 身份驗證 =====
+// ===== 登入/註冊模式切換 =====
 function showError(msg) {
   const el = document.getElementById('authError');
   el.textContent = msg; el.classList.remove('hidden');
 }
-document.getElementById('loginBtn').onclick = async () => {
+
+document.getElementById('switchAuthModeBtn').onclick = () => {
+  isLoginMode = !isLoginMode;
+  document.getElementById('authError').classList.add('hidden'); // 切換時清空錯誤
+  document.getElementById('passwordInput').value = ''; // 切換時清空密碼
+  
+  const modeLabel = document.getElementById('authModeLabel');
+  const primaryBtn = document.getElementById('primaryAuthBtn');
+  const switchBtn = document.getElementById('switchAuthModeBtn');
+
+  if (isLoginMode) {
+    modeLabel.textContent = '導師專用 - 登入';
+    primaryBtn.textContent = '登入';
+    primaryBtn.classList.replace('bg-green-600', 'bg-blue-600');
+    primaryBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+    switchBtn.textContent = '還沒有帳號？註冊新帳號';
+  } else {
+    modeLabel.textContent = '導師專用 - 註冊';
+    primaryBtn.textContent = '確定註冊';
+    primaryBtn.classList.replace('bg-blue-600', 'bg-green-600');
+    primaryBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+    switchBtn.textContent = '已有帳號？返回登入';
+  }
+};
+
+// ===== 身份驗證整合處理 =====
+document.getElementById('primaryAuthBtn').onclick = async () => {
   const email = document.getElementById('emailInput').value;
   const pwd = document.getElementById('passwordInput').value;
   if (!email || !pwd) return showError('請填寫帳號與密碼');
-  try { await signInWithEmailAndPassword(auth, email, pwd); }
-  catch(e) { showError('登入失敗：' + (e.code === 'auth/invalid-credential' ? '帳號或密碼錯誤' : e.message)); }
+
+  if (isLoginMode) {
+    // 執行登入
+    try { 
+      await signInWithEmailAndPassword(auth, email, pwd); 
+    } catch(e) { 
+      showError('登入失敗：' + (e.code === 'auth/invalid-credential' ? '帳號或密碼錯誤' : e.message)); 
+    }
+  } else {
+    // 執行註冊
+    if (pwd.length < 6) return showError('密碼至少需要 6 個字元');
+    try { 
+      await createUserWithEmailAndPassword(auth, email, pwd); 
+    } catch(e) { 
+      if (e.code === 'auth/admin-restricted-operation') {
+        showError('註冊失敗：Firebase 後台未開放註冊。請至 Firebase Console -> Authentication 設定啟用使用者註冊功能。');
+      } else if (e.code === 'auth/email-already-in-use') {
+        showError('註冊失敗：此信箱已經被註冊過了。');
+      } else {
+        showError('註冊失敗：' + e.message); 
+      }
+    }
+  }
 };
-document.getElementById('registerBtn').onclick = async () => {
-  const email = document.getElementById('emailInput').value;
-  const pwd = document.getElementById('passwordInput').value;
-  if (!email || !pwd) return showError('請填寫帳號與密碼');
-  if (pwd.length < 6) return showError('密碼至少需要 6 個字元');
-  try { await createUserWithEmailAndPassword(auth, email, pwd); }
-  catch(e) { showError('註冊失敗：' + e.message); }
-};
+
 document.getElementById('anonBtn').onclick = async () => {
   try { await signInAnonymously(auth); }
   catch(e) { showError('進入失敗：' + e.message); }

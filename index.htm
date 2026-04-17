@@ -24,12 +24,18 @@
     <p id="authModeLabel" class="text-xs text-slate-400 text-center mb-6 font-bold">導師專用 - 登入</p>
     <div class="space-y-3">
       <input id="emailInput" type="email" placeholder="電子郵件" class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"/>
-      <div class="relative">
-        <input id="passwordInput" type="password" placeholder="密碼" class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10"/>
-        <button id="togglePwd" type="button" class="absolute right-3 top-2.5 text-xl hover:scale-110 transition-transform" title="顯示/隱藏密碼">
-          <span id="eyeIcon">🙈</span>
-          <span id="eyeOffIcon" style="display:none">🐵</span>
-        </button>
+      
+      <div class="space-y-1">
+        <div class="relative">
+          <input id="passwordInput" type="password" placeholder="密碼" class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10"/>
+          <button id="togglePwd" type="button" class="absolute right-3 top-2.5 text-xl hover:scale-110 transition-transform" title="顯示/隱藏密碼">
+            <span id="eyeIcon">🙈</span>
+            <span id="eyeOffIcon" style="display:none">🐵</span>
+          </button>
+        </div>
+        <div class="flex justify-end" id="forgotPwdWrapper">
+          <button id="forgotPwdBtn" type="button" class="text-[11px] text-slate-500 hover:text-blue-600 transition font-bold">忘記密碼？</button>
+        </div>
       </div>
       
       <!-- 主操作按鈕 (動態切換登入/註冊) -->
@@ -43,7 +49,7 @@
         <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
       </div>
     </div>
-    <p id="authError" class="text-red-500 text-xs mt-3 text-center hidden"></p>
+    <p id="authError" class="text-xs mt-3 text-center hidden"></p>
   </div>
 </div>
 
@@ -55,7 +61,10 @@
     <div class="p-4 bg-slate-800 text-white flex justify-between items-center sticky top-0 z-20">
       <h1 class="text-base font-bold">控制面板</h1>
       <div class="flex gap-2">
-        <span id="userEmail" class="text-xs text-slate-400 self-center"></span>
+        <span id="userEmail" class="text-[11px] text-slate-400 self-center"></span>
+        <button id="changePwdBtn" class="p-1.5 hover:bg-slate-700 rounded-full transition hidden" title="更改密碼">
+          <i data-lucide="key" class="w-4 h-4"></i>
+        </button>
         <button id="logoutBtn" class="p-1.5 hover:bg-slate-700 rounded-full transition" title="登出">
           <i data-lucide="log-out" class="w-4 h-4"></i>
         </button>
@@ -196,10 +205,26 @@
   </div>
 </div>
 
+<!-- 更改密碼 Modal -->
+<div id="pwdModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs space-y-4">
+    <h3 class="font-bold border-b pb-2 text-slate-800">更改密碼</h3>
+    <div>
+      <label class="text-[10px] font-black text-slate-400 block mb-1 uppercase">新密碼 (至少 6 個字元)</label>
+      <input id="newPwdInput" type="password" class="w-full p-2 border-2 rounded-lg focus:border-blue-500 outline-none font-bold"/>
+    </div>
+    <p id="pwdModalError" class="text-red-500 text-xs hidden"></p>
+    <div class="flex gap-2">
+      <button id="pwdModalCancel" class="flex-1 py-2.5 bg-slate-100 rounded-xl text-sm font-bold hover:bg-slate-200">取消</button>
+      <button id="pwdModalSave" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">更新密碼</button>
+    </div>
+  </div>
+</div>
+
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ===== 你的 Firebase 設定 =====
@@ -402,6 +427,40 @@ document.getElementById('modalSave').onclick = () => {
   renderGrid();
 };
 
+// 更改密碼 Modal 控制
+document.getElementById('changePwdBtn').onclick = () => {
+  document.getElementById('newPwdInput').value = '';
+  document.getElementById('pwdModalError').classList.add('hidden');
+  document.getElementById('pwdModal').classList.remove('hidden');
+};
+document.getElementById('pwdModalCancel').onclick = () => {
+  document.getElementById('pwdModal').classList.add('hidden');
+};
+document.getElementById('pwdModalSave').onclick = async () => {
+  const newPwd = document.getElementById('newPwdInput').value;
+  const errEl = document.getElementById('pwdModalError');
+  
+  if (newPwd.length < 6) {
+    errEl.textContent = '密碼至少需要 6 個字元';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  
+  try {
+    await updatePassword(auth.currentUser, newPwd);
+    document.getElementById('pwdModal').classList.add('hidden');
+    alert('密碼已成功更新！請牢記您的新密碼。'); // 更新成功通知
+  } catch(e) {
+    if (e.code === 'auth/requires-recent-login') {
+      errEl.textContent = '基於安全考量，請「登出後重新登入」，再進行更改密碼。';
+    } else {
+      errEl.textContent = '更新失敗：' + e.message;
+    }
+    errEl.classList.remove('hidden');
+  }
+};
+
+
 // ===== 隨機排位 =====
 document.getElementById('shuffleBtn').onclick = () => {
   const students = document.getElementById('studentList').value.split('\n')
@@ -529,9 +588,11 @@ document.getElementById('togglePwd').onclick = () => {
 };
 
 // ===== 登入/註冊模式切換 =====
-function showError(msg) {
+function showMessage(msg, isError = true) {
   const el = document.getElementById('authError');
-  el.textContent = msg; el.classList.remove('hidden');
+  el.textContent = msg;
+  el.className = `text-xs mt-3 text-center ${isError ? 'text-red-500' : 'text-green-600'}`;
+  el.classList.remove('hidden');
 }
 
 document.getElementById('switchAuthModeBtn').onclick = () => {
@@ -542,6 +603,7 @@ document.getElementById('switchAuthModeBtn').onclick = () => {
   const modeLabel = document.getElementById('authModeLabel');
   const primaryBtn = document.getElementById('primaryAuthBtn');
   const switchBtn = document.getElementById('switchAuthModeBtn');
+  const forgotPwdWrap = document.getElementById('forgotPwdWrapper');
 
   if (isLoginMode) {
     modeLabel.textContent = '導師專用 - 登入';
@@ -549,40 +611,56 @@ document.getElementById('switchAuthModeBtn').onclick = () => {
     primaryBtn.classList.replace('bg-green-600', 'bg-blue-600');
     primaryBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
     switchBtn.textContent = '還沒有帳號？註冊新帳號';
+    forgotPwdWrap.style.display = 'flex'; // 登入模式顯示忘記密碼
   } else {
     modeLabel.textContent = '導師專用 - 註冊';
     primaryBtn.textContent = '確定註冊';
     primaryBtn.classList.replace('bg-blue-600', 'bg-green-600');
     primaryBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
     switchBtn.textContent = '已有帳號？返回登入';
+    forgotPwdWrap.style.display = 'none'; // 註冊模式隱藏忘記密碼
   }
 };
+
+// 忘記密碼功能
+document.getElementById('forgotPwdBtn').onclick = async () => {
+  const email = document.getElementById('emailInput').value;
+  if (!email) return showMessage('請先在上方輸入您的「電子郵件」帳號', true);
+  
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showMessage('✅ 密碼重設信已寄出！請至信箱點擊連結設定新密碼。', false);
+  } catch(e) {
+    showMessage('發送重設信失敗：' + e.message, true);
+  }
+};
+
 
 // ===== 身份驗證整合處理 =====
 document.getElementById('primaryAuthBtn').onclick = async () => {
   const email = document.getElementById('emailInput').value;
   const pwd = document.getElementById('passwordInput').value;
-  if (!email || !pwd) return showError('請填寫帳號與密碼');
+  if (!email || !pwd) return showMessage('請填寫帳號與密碼', true);
 
   if (isLoginMode) {
     // 執行登入
     try { 
       await signInWithEmailAndPassword(auth, email, pwd); 
     } catch(e) { 
-      showError('登入失敗：' + (e.code === 'auth/invalid-credential' ? '帳號或密碼錯誤' : e.message)); 
+      showMessage('登入失敗：' + (e.code === 'auth/invalid-credential' ? '帳號或密碼錯誤' : e.message), true); 
     }
   } else {
     // 執行註冊
-    if (pwd.length < 6) return showError('密碼至少需要 6 個字元');
+    if (pwd.length < 6) return showMessage('密碼至少需要 6 個字元', true);
     try { 
       await createUserWithEmailAndPassword(auth, email, pwd); 
     } catch(e) { 
       if (e.code === 'auth/admin-restricted-operation') {
-        showError('註冊失敗：Firebase 後台未開放註冊。請至 Firebase Console -> Authentication 設定啟用使用者註冊功能。');
+        showMessage('註冊失敗：Firebase 後台未開放註冊。請至 Firebase Console -> Authentication 設定啟用使用者註冊功能。', true);
       } else if (e.code === 'auth/email-already-in-use') {
-        showError('註冊失敗：此信箱已經被註冊過了。');
+        showMessage('註冊失敗：此信箱已經被註冊過了。', true);
       } else {
-        showError('註冊失敗：' + e.message); 
+        showMessage('註冊失敗：' + e.message, true); 
       }
     }
   }
@@ -590,7 +668,7 @@ document.getElementById('primaryAuthBtn').onclick = async () => {
 
 document.getElementById('anonBtn').onclick = async () => {
   try { await signInAnonymously(auth); }
-  catch(e) { showError('進入失敗：' + e.message); }
+  catch(e) { showMessage('進入失敗：' + e.message, true); }
 };
 document.getElementById('logoutBtn').onclick = () => signOut(auth);
 
@@ -605,6 +683,8 @@ onAuthStateChanged(auth, async (user) => {
 
     if (!user.isAnonymous) {
       document.getElementById('cloudSection').classList.remove('opacity-40', 'pointer-events-none');
+      document.getElementById('changePwdBtn').classList.remove('hidden'); // 非訪客顯示更改密碼按鈕
+      
       const q = collection(db, 'seatapp', user.uid, 'classes');
       onSnapshot(q, (snap) => {
         savedClasses = [];
@@ -621,6 +701,7 @@ onAuthStateChanged(auth, async (user) => {
       });
     } else {
       document.getElementById('cloudSection').classList.add('opacity-40', 'pointer-events-none');
+      document.getElementById('changePwdBtn').classList.add('hidden'); // 訪客隱藏更改密碼按鈕
     }
 
     initLayout();

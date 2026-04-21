@@ -810,7 +810,15 @@ document.getElementById('anonBtn').onclick = async () => {
   try { await signInAnonymously(auth); }
   catch(e) { showMessage('進入失敗：' + e.message, true); }
 };
-document.getElementById('logoutBtn').onclick = () => signOut(auth);
+
+document.getElementById('logoutBtn').onclick = () => {
+  // 在登出前優先取消 Firestore 的資料監聽，避免瞬間失去憑證引發 permission-denied 錯誤
+  if (unsubscribeSnapshot) {
+    unsubscribeSnapshot();
+    unsubscribeSnapshot = null;
+  }
+  signOut(auth);
+};
 
 // ===== Auth 狀態監聽 =====
 onAuthStateChanged(auth, async (user) => {

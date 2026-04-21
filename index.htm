@@ -90,10 +90,13 @@
         <select id="savedClassSelect" class="w-full p-2 border rounded text-xs bg-white">
           <option value="">-- 選擇存檔 --</option>
         </select>
-        <div class="flex gap-2">
-          <button id="loadBtn" class="flex-1 bg-green-600 text-white py-2 rounded text-xs font-bold hover:bg-green-700 transition">載入</button>
-          <button id="saveBtn" class="flex-1 bg-violet-600 text-white py-2 rounded text-xs font-bold hover:bg-violet-700 transition flex items-center justify-center gap-1">
+        <div class="flex gap-1.5">
+          <button id="loadBtn" class="flex-[1.5] bg-green-600 text-white py-2 rounded text-xs font-bold hover:bg-green-700 transition">載入</button>
+          <button id="saveBtn" class="flex-[1.5] bg-violet-600 text-white py-2 rounded text-xs font-bold hover:bg-violet-700 transition flex items-center justify-center gap-1">
             <i data-lucide="save" class="w-3 h-3"></i>儲存
+          </button>
+          <button id="deleteClassBtn" class="flex-[0.8] bg-rose-500 text-white py-2 rounded text-xs font-bold hover:bg-rose-600 transition flex items-center justify-center" title="刪除選取的班級存檔">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           </button>
         </div>
       </div>
@@ -131,7 +134,7 @@
         <textarea id="memoInput" rows="4" class="w-full p-2 border rounded text-xs" placeholder="說明事項..."></textarea>
       </div>
 
-      <!-- 操作按鈕 (顏色大升級：馬卡龍色系增強對比，防誤按) -->
+      <!-- 操作按鈕 -->
       <div class="space-y-2 pt-1">
         <button id="exportBtn" class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-sky-600 transition shadow-sm text-sm">
           <i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)
@@ -148,7 +151,7 @@
 
   <!-- 預覽區 -->
   <main class="flex-1 overflow-auto bg-slate-500 p-6 flex justify-center items-start">
-    <!-- 完美 A4 比例容器 (794x1123, 內距 38px 剛好約為 1 公分) -->
+    <!-- 完美 A4 比例容器 -->
     <div id="captureArea" class="w-[794px] h-[1123px] shrink-0 bg-white shadow-2xl p-[38px] flex flex-col text-black mx-auto overflow-hidden relative">
 
       <!-- 標題 -->
@@ -161,7 +164,7 @@
         </div>
       </div>
 
-      <!-- 下方主內容區 (左側：座位+幹部+備註，右側：名單拉長至底部) -->
+      <!-- 下方主內容區 -->
       <div class="flex gap-4 flex-1 min-h-0">
         
         <!-- 左側：排版區 -->
@@ -189,7 +192,7 @@
           </div>
         </div>
 
-        <!-- 右側：名單 (直達底部，充足空間) -->
+        <!-- 右側：名單 -->
         <div class="w-[105px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
           <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest shrink-0">
             座號名單
@@ -198,7 +201,7 @@
         </div>
       </div>
 
-      <!-- 版權聲明 (置於 A4 最底部) -->
+      <!-- 版權聲明 -->
       <div class="text-center text-[12px] text-gray-400 font-bold mt-4 shrink-0 tracking-widest">
         設計者By Chen Yiju & AI
       </div>
@@ -271,19 +274,19 @@
       </table>
     </div>
     <div class="text-xs text-amber-600 font-bold bg-amber-50 p-2 rounded text-center">
-      💡 提示：點擊「載入幫助」後，您的畫面會變成該導師的排版。若您修改後按下儲存，檔案會直接覆蓋回該導師的帳號中！
+      💡 提示：點擊「載入幫助」後，您的畫面會變成該導師的排版。若您修改後按下儲存，檔案會直接覆蓋回該導師的帳號中！<br/>若想刪除該班級存檔，載入後點擊左側控制面板的垃圾桶圖示即可。
     </div>
   </div>
 </div>
 
-<!-- Firebase SDKs -->
+<!-- Firebase SDKs (修正匯入 deleteDoc 模組) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, collection, onSnapshot, collectionGroup, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, collectionGroup, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ===== ★★★ 重要設定：在此填入您的管理者信箱 ★★★ =====
-const ADMIN_EMAIL = "yijuchen243@gmail.com"; // <-- 請修改為您的信箱
+const ADMIN_EMAIL = "yijuchen243@gmail.com"; 
 
 // ===== 你的 Firebase 設定 =====
 const firebaseConfig = {
@@ -309,8 +312,8 @@ let editingIdx = null;
 let draggedIdx = null;
 let currentUser = null;
 let isLoginMode = true; 
-let currentEditingUid = null; // 管理者模式：紀錄正在幫誰修改檔案
-let unsubscribeSnapshot = null; // 紀錄 Firebase 監聽器以便切換帳號時取消
+let currentEditingUid = null; 
+let unsubscribeSnapshot = null; 
 
 // ===== 初始化 Lucide =====
 lucide.createIcons();
@@ -491,15 +494,11 @@ document.getElementById('adminBtn').onclick = async () => {
     const allDocs = [];
     
     querySnapshot.forEach((doc) => {
-      // 解析路徑取得原作者的 UID (seatapp/{teacherUid}/classes/{classId})
       const teacherUid = doc.ref.parent.parent.id; 
       allDocs.push({ id: doc.id, teacherUid, ...doc.data() });
     });
 
-    // 依更新時間新到舊排序
     allDocs.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-
-    // 儲存於全域供載入使用
     window.adminLoadedClasses = allDocs;
 
     let html = '';
@@ -534,18 +533,15 @@ document.getElementById('closeAdminModal').onclick = () => {
   document.getElementById('adminModal').classList.add('hidden');
 };
 
-// 讓 HTML 中的 onclick 可以呼叫到這個函數
 window.loadAdminClass = (index) => {
   const data = window.adminLoadedClasses[index];
   if(!data) return;
 
-  // 進入管理者編輯模式：紀錄 UID 並顯示警告橫幅
   currentEditingUid = data.teacherUid;
   document.getElementById('adminEditWarning').classList.remove('hidden');
   document.getElementById('adminEditWarning').classList.add('flex');
   document.getElementById('adminEditTargetEmail').textContent = data.teacherEmail || '未知帳號';
 
-  // 將老師的資料載入畫布
   document.getElementById('classTitle').value = data.title;
   document.getElementById('previewTitle').textContent = data.title;
   cols = data.cols; rows = data.rows;
@@ -561,7 +557,10 @@ window.loadAdminClass = (index) => {
   renderGrid();
   renderNameList();
 
-  // 關閉 Modal
+  const sel = document.getElementById('savedClassSelect');
+  sel.innerHTML = `<option value="${data.id}">${data.id}</option>`;
+  sel.value = data.id;
+
   document.getElementById('adminModal').classList.add('hidden');
 };
 
@@ -570,9 +569,8 @@ document.getElementById('exitAdminEditBtn').onclick = () => {
   currentEditingUid = null;
   document.getElementById('adminEditWarning').classList.add('hidden');
   document.getElementById('adminEditWarning').classList.remove('flex');
-  document.getElementById('resetBtn').click(); // 退出時重設為預設畫面
+  resetApp(true); 
 };
-
 
 // 更改密碼 Modal 控制
 document.getElementById('changePwdBtn').onclick = () => {
@@ -628,19 +626,21 @@ document.getElementById('shuffleBtn').onclick = () => {
   renderGrid();
 };
 
-// ===== 重設 =====
-document.getElementById('resetBtn').onclick = () => {
-  // 如果不是被強制點擊(有帶參數)，才詢問確認
-  if (event && event.isTrusted && !confirm('確定要重設所有欄位？')) return;
+// ===== 獨立的重設與清理畫面功能 =====
+function resetApp(force = false) {
+  if (!force && !confirm('確定要重設所有欄位？')) return;
   document.getElementById('classTitle').value = '114學年度 某某班 座位表';
   document.getElementById('previewTitle').textContent = '114學年度 某某班 座位表';
   document.getElementById('studentList').value = '';
   document.getElementById('memoInput').value = '';
   document.getElementById('memoDisplay').innerHTML = `暫無說明事項。`;
+  document.getElementById('savedClassSelect').value = ''; 
   OFFICERS.forEach((_,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=''; });
   layout = layout.map(s => ({no:'', name:'', fixed:false}));
   renderGrid();
-};
+}
+
+document.getElementById('resetBtn').onclick = () => resetApp(false);
 
 // ===== 匯出圖片 =====
 document.getElementById('exportBtn').onclick = async () => {
@@ -812,7 +812,6 @@ document.getElementById('anonBtn').onclick = async () => {
 };
 
 document.getElementById('logoutBtn').onclick = () => {
-  // 在登出前優先取消 Firestore 的資料監聽，避免瞬間失去憑證引發 permission-denied 錯誤
   if (unsubscribeSnapshot) {
     unsubscribeSnapshot();
     unsubscribeSnapshot = null;
@@ -824,7 +823,6 @@ document.getElementById('logoutBtn').onclick = () => {
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   
-  // 切換帳號前，若有舊的監聽器則先行取消，避免引發 permission-denied 錯誤
   if (unsubscribeSnapshot) {
     unsubscribeSnapshot();
     unsubscribeSnapshot = null;
@@ -840,8 +838,7 @@ onAuthStateChanged(auth, async (user) => {
       document.getElementById('cloudSection').classList.remove('opacity-40', 'pointer-events-none');
       document.getElementById('changePwdBtn').classList.remove('hidden'); 
       
-      // 動態顯示管理者按鈕 (比對是否為預設管理者信箱)
-      if (user.email === ADMIN_EMAIL) {
+      if (user?.email === ADMIN_EMAIL) {
         document.getElementById('adminBtn').classList.remove('hidden');
       } else {
         document.getElementById('adminBtn').classList.add('hidden');
@@ -849,9 +846,7 @@ onAuthStateChanged(auth, async (user) => {
 
       const q = collection(db, 'seatapp', user.uid, 'classes');
       
-      // 將監聽器指派給全域變數，以便登出時可以取消訂閱
       unsubscribeSnapshot = onSnapshot(q, (snap) => {
-        // 如果目前不是處於「管理者編輯模式」，才更新左側下拉選單
         if (!currentEditingUid) {
           savedClasses = [];
           snap.forEach(d => savedClasses.push({id: d.id, ...d.data()}));
@@ -889,15 +884,22 @@ onAuthStateChanged(auth, async (user) => {
 
 // ===== 雲端儲存 =====
 document.getElementById('saveBtn').onclick = async () => {
-  if (!currentUser || currentUser.isAnonymous) return alert('請先登入才能使用雲端儲存');
+  if (!currentUser || currentUser.isAnonymous) {
+    alert('請先登入才能使用雲端儲存');
+    return;
+  }
+  
   const title = document.getElementById('classTitle').value.trim();
-  if (!title) return alert('請輸入班級名稱');
+  if (!title) {
+    alert('請輸入班級名稱');
+    return;
+  }
+  
   const officerVals = OFFICERS.map((_,i) => document.getElementById(`officer_${i}`)?.value||'');
   
-  // 重點！判斷要存給誰：如果處於管理者編輯模式，就覆蓋到該老師的帳號下
-  const isHelping = (currentUser.email === ADMIN_EMAIL && currentEditingUid !== null);
+  const isHelping = (currentUser?.email === ADMIN_EMAIL && currentEditingUid !== null);
   const targetUid = isHelping ? currentEditingUid : currentUser.uid;
-  const targetEmail = isHelping ? document.getElementById('adminEditTargetEmail').textContent : currentUser.email;
+  const targetEmail = isHelping ? document.getElementById('adminEditTargetEmail').textContent : currentUser?.email;
 
   try {
     await setDoc(doc(db, 'seatapp', targetUid, 'classes', title), {
@@ -913,6 +915,46 @@ document.getElementById('saveBtn').onclick = async () => {
   } catch(e) {
     console.error(e);
     alert('儲存失敗：' + e.message + '\n\n如果是管理者，請務必確認 Firebase Rules 已正確設定！');
+  }
+};
+
+// ===== 刪除存檔 =====
+document.getElementById('deleteClassBtn').onclick = async () => {
+  if (!currentUser || currentUser.isAnonymous) {
+    alert('請先登入才能執行刪除動作');
+    return;
+  }
+  
+  // 優先抓取下拉選單的值，如果沒選則抓取目前畫面的班級名稱
+  const selectVal = document.getElementById('savedClassSelect').value;
+  const titleInput = document.getElementById('classTitle').value.trim();
+  const title = selectVal || titleInput;
+  
+  if (!title) {
+    alert('請先選擇要刪除的存檔，或輸入完整的班級名稱！');
+    return;
+  }
+
+  if (!confirm(`警告：確定要永久刪除「${title}」這個存檔嗎？\n此動作無法復原！`)) return;
+
+  const isHelping = (currentUser?.email === ADMIN_EMAIL && currentEditingUid !== null);
+  const targetUid = isHelping ? currentEditingUid : currentUser.uid;
+
+  try {
+    await deleteDoc(doc(db, 'seatapp', targetUid, 'classes', title));
+    
+    alert(`成功刪除班級「${title}」！`);
+    
+    // 如果是在管理者幫助模式下刪除的，強制退出並重設畫面
+    if (isHelping) {
+      document.getElementById('exitAdminEditBtn').click();
+    } else {
+      // 刪除自己的檔案後清空畫面
+      resetApp(true);
+    }
+  } catch(e) {
+    console.error(e);
+    alert('刪除失敗：權限不足或網路問題。\n詳細錯誤：' + e.message);
   }
 };
 

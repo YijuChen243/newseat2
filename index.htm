@@ -145,8 +145,8 @@
 
       <!-- 講桌 -->
       <div class="flex justify-center mb-6 shrink-0">
-        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50">
-          <span class="relative -top-[5px]">講　桌  👨‍🏫</span>
+        <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50 pb-[10px]">
+          講　桌  👨‍🏫
         </div>
       </div>
 
@@ -159,22 +159,29 @@
           <!-- 座位格 -->
           <div id="seatGrid" class="grid gap-2 shrink-0"></div>
 
-          <!-- 幹部表 (擴充為 7 欄，共 14 格) -->
-          <div id="officersTable" class="grid grid-cols-7 border-t-[3px] border-l-[3px] border-black mt-auto shrink-0"></div>
+          <!-- 幹部表 -->
+          <div class="mt-auto shrink-0 flex flex-col">
+            <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest border-[3px] border-b-0 border-black">
+              幹部名單
+            </div>
+            <div id="officersTable" class="grid grid-cols-7 border-t-[3px] border-l-[3px] border-black"></div>
+          </div>
 
           <!-- 備註區 -->
-          <div id="memoDisplay" class="border-[2px] border-black px-3 pt-0 pb-1 min-h-[40px] mt-5 text-[18px] leading-snug whitespace-pre-wrap relative bg-white italic font-medium shrink-0">
-            <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
-              <span class="relative -top-[2px]">備註說明區</span>
-            </span>
-            <div class="relative -top-[12px]">暫無說明事項。</div>
+          <div class="mt-2 shrink-0 flex flex-col">
+            <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest border-[3px] border-b-0 border-black">
+              備註說明區
+            </div>
+            <div id="memoDisplay" class="border-[3px] border-black px-3 pt-0 pb-[24px] min-h-[50px] text-[18px] leading-snug whitespace-pre-wrap bg-white italic font-medium flex flex-col justify-center">
+              暫無說明事項。
+            </div>
           </div>
         </div>
 
         <!-- 右側：名單 (直達底部，充足空間) -->
         <div class="w-[105px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
-          <div class="bg-black text-white text-center py-1.5 font-bold text-[13px] tracking-widest shrink-0">
-            <span class="relative -top-[2px]">座號名單</span>
+          <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest shrink-0">
+            座號名單
           </div>
           <div id="nameList" class="flex-1 p-1 font-bold overflow-hidden flex flex-col gap-[1px]"></div>
         </div>
@@ -294,13 +301,13 @@ function renderGrid() {
     div.draggable = !!seat.name;
     div.dataset.idx = i;
     
-    // 改用 relative 與 -top 來精準控制向上的偏移量，強制抵銷 html2canvas 匯出時文字下沉的誤差
+    // 全面改用 Padding Bottom (pb) 推擠法，徹底解決 html2canvas 匯出時文字下沉的誤差
     div.innerHTML = `
-      <div class="h-[30%] border-b-2 border-black flex items-center justify-center bg-slate-100 font-bold text-center">
-        <span class="relative -top-[5px]" style="font-size:${noFontSize}">${seat.no}</span>
+      <div class="h-[30%] border-b-2 border-black flex items-center justify-center bg-slate-100 font-bold text-center pb-[10px]" style="font-size:${noFontSize}">
+        ${seat.no}
       </div>
-      <div class="h-[70%] flex items-center justify-center px-1 overflow-hidden font-black text-center whitespace-nowrap">
-        <span class="relative -top-[8px]" style="font-size:${nameFontSize}">${seat.name}</span>
+      <div class="h-[70%] flex items-center justify-center px-1 overflow-hidden font-black text-center whitespace-nowrap pb-[16px]" style="font-size:${nameFontSize}">
+        ${seat.name}
       </div>
       <button class="lock-btn absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 no-print ${seat.fixed?'text-amber-500':'text-slate-300'}" data-idx="${i}" style="z-index: 10;" data-html2canvas-ignore="true">
         ${seat.fixed ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
@@ -346,13 +353,12 @@ function renderOfficersTable() {
   OFFICERS.forEach((title, i) => {
     const val = document.getElementById(`officer_${i}`)?.value || '';
     const cell = document.createElement('div');
-    // 增加 min-h，並移除 truncate，改用 break-words 與 leading-snug 確保姓名不被砍腳
-    cell.className = 'border-r-[3px] border-b-[3px] border-black p-1.5 min-h-[55px] text-center bg-white flex flex-col items-center justify-center gap-1';
+    // 改用 Padding Bottom 推擠法
+    cell.className = 'border-r-[3px] border-b-[3px] border-black px-1.5 pt-[2px] pb-[14px] min-h-[55px] text-center bg-white flex flex-col items-center justify-center gap-1';
     
-    // 在 title (幹部名稱) 與 val (學生姓名) 外面包上 span 並加上向上推力
     cell.innerHTML = `
-      <div class="text-[11px] font-bold text-gray-500 leading-snug"><span class="relative -top-[4px]">${title}</span></div>
-      <div class="text-[15px] font-bold w-full leading-snug break-words"><span class="relative -top-[4px]">${val}</span></div>`;
+      <div class="text-[11px] font-bold text-gray-500 leading-snug">${title}</div>
+      <div class="text-[15px] font-bold w-full leading-snug break-words">${val}</div>`;
     table.appendChild(cell);
   });
 }
@@ -365,7 +371,8 @@ function renderNameList() {
     // 智慧拆分：不管是空白或 Excel 複製來的 Tab (跳格) 都能完美解析
     const p = l.trim().split(/\s+/);
     const str = p[0] + (p.length > 1 ? ' ' + p.slice(1).join(' ') : '');
-    return `<div class="border-b border-slate-200 py-[3px] px-1 truncate text-center text-[13px] leading-tight"><span class="relative -top-[2px]">${str}</span></div>`;
+    // 改用 Padding Bottom 推擠法
+    return `<div class="border-b border-slate-200 pt-[1px] pb-[5px] px-1 truncate text-center text-[13px] leading-tight">${str}</div>`;
   }).join('');
 }
 
@@ -374,12 +381,8 @@ document.getElementById('classTitle').addEventListener('input', e => {
   document.getElementById('previewTitle').textContent = e.target.value;
 });
 document.getElementById('memoInput').addEventListener('input', e => {
-  document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
-      <span class="relative -top-[2px]">備註說明區</span>
-    </span>
-    <div class="relative -top-[12px]">${e.target.value || '暫無說明事項。'}</div>
-  `;
+  // 因為現在是純文字容器且由父層控制Padding對齊，直接抽換內文即可
+  document.getElementById('memoDisplay').innerHTML = `${e.target.value || '暫無說明事項。'}`;
 });
 
 // 當正在輸入或貼上時即時更新
@@ -459,7 +462,7 @@ document.getElementById('pwdModalSave').onclick = async () => {
   try {
     await updatePassword(auth.currentUser, newPwd);
     document.getElementById('pwdModal').classList.add('hidden');
-    alert('密碼已成功更新！請牢記您的新密碼。'); // 更新成功通知
+    alert('密碼已成功更新！請牢記您的新密碼。');
   } catch(e) {
     if (e.code === 'auth/requires-recent-login') {
       errEl.textContent = '基於安全考量，請「登出後重新登入」，再進行更改密碼。';
@@ -469,7 +472,6 @@ document.getElementById('pwdModalSave').onclick = async () => {
     errEl.classList.remove('hidden');
   }
 };
-
 
 // ===== 隨機排位 =====
 document.getElementById('shuffleBtn').onclick = () => {
@@ -499,12 +501,7 @@ document.getElementById('resetBtn').onclick = () => {
   document.getElementById('previewTitle').textContent = '114學年度 某某班 座位表';
   document.getElementById('studentList').value = '';
   document.getElementById('memoInput').value = '';
-  document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
-      <span class="relative -top-[2px]">備註說明區</span>
-    </span>
-    <div class="relative -top-[12px]">暫無說明事項。</div>
-  `;
+  document.getElementById('memoDisplay').innerHTML = `暫無說明事項。`;
   OFFICERS.forEach((_,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=''; });
   layout = layout.map(s => ({no:'', name:'', fixed:false}));
   renderGrid();
@@ -609,8 +606,8 @@ function showMessage(msg, isError = true) {
 
 document.getElementById('switchAuthModeBtn').onclick = () => {
   isLoginMode = !isLoginMode;
-  document.getElementById('authError').classList.add('hidden'); // 切換時清空錯誤
-  document.getElementById('passwordInput').value = ''; // 切換時清空密碼
+  document.getElementById('authError').classList.add('hidden'); 
+  document.getElementById('passwordInput').value = ''; 
   
   const modeLabel = document.getElementById('authModeLabel');
   const primaryBtn = document.getElementById('primaryAuthBtn');
@@ -623,14 +620,14 @@ document.getElementById('switchAuthModeBtn').onclick = () => {
     primaryBtn.classList.replace('bg-green-600', 'bg-blue-600');
     primaryBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
     switchBtn.textContent = '還沒有帳號？註冊新帳號';
-    forgotPwdWrap.style.display = 'flex'; // 登入模式顯示忘記密碼
+    forgotPwdWrap.style.display = 'flex'; 
   } else {
     modeLabel.textContent = '導師專用 - 註冊';
     primaryBtn.textContent = '確定註冊';
     primaryBtn.classList.replace('bg-blue-600', 'bg-green-600');
     primaryBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
     switchBtn.textContent = '已有帳號？返回登入';
-    forgotPwdWrap.style.display = 'none'; // 註冊模式隱藏忘記密碼
+    forgotPwdWrap.style.display = 'none'; 
   }
 };
 
@@ -647,7 +644,6 @@ document.getElementById('forgotPwdBtn').onclick = async () => {
   }
 };
 
-
 // ===== 身份驗證整合處理 =====
 document.getElementById('primaryAuthBtn').onclick = async () => {
   const email = document.getElementById('emailInput').value;
@@ -655,14 +651,12 @@ document.getElementById('primaryAuthBtn').onclick = async () => {
   if (!email || !pwd) return showMessage('請填寫帳號與密碼', true);
 
   if (isLoginMode) {
-    // 執行登入
     try { 
       await signInWithEmailAndPassword(auth, email, pwd); 
     } catch(e) { 
       showMessage('登入失敗：' + (e.code === 'auth/invalid-credential' ? '帳號或密碼錯誤' : e.message), true); 
     }
   } else {
-    // 執行註冊
     if (pwd.length < 6) return showMessage('密碼至少需要 6 個字元', true);
     try { 
       await createUserWithEmailAndPassword(auth, email, pwd); 
@@ -695,7 +689,7 @@ onAuthStateChanged(auth, async (user) => {
 
     if (!user.isAnonymous) {
       document.getElementById('cloudSection').classList.remove('opacity-40', 'pointer-events-none');
-      document.getElementById('changePwdBtn').classList.remove('hidden'); // 非訪客顯示更改密碼按鈕
+      document.getElementById('changePwdBtn').classList.remove('hidden'); 
       
       const q = collection(db, 'seatapp', user.uid, 'classes');
       onSnapshot(q, (snap) => {
@@ -713,7 +707,7 @@ onAuthStateChanged(auth, async (user) => {
       });
     } else {
       document.getElementById('cloudSection').classList.add('opacity-40', 'pointer-events-none');
-      document.getElementById('changePwdBtn').classList.add('hidden'); // 訪客隱藏更改密碼按鈕
+      document.getElementById('changePwdBtn').classList.add('hidden'); 
     }
 
     initLayout();
@@ -759,12 +753,7 @@ document.getElementById('loadBtn').onclick = () => {
   document.getElementById('rowsInput').value = rows;
   document.getElementById('studentList').value = data.studentListRaw || '';
   document.getElementById('memoInput').value = data.memo || '';
-  document.getElementById('memoDisplay').innerHTML = `
-    <span class="absolute -top-[20px] left-4 bg-white px-2 text-[16px] font-black uppercase tracking-widest border-[2px] border-black">
-      <span class="relative -top-[2px]">備註說明區</span>
-    </span>
-    <div class="relative -top-[12px]">${data.memo || '暫無說明事項。'}</div>
-  `;
+  document.getElementById('memoDisplay').innerHTML = `${data.memo || '暫無說明事項。'}`;
   (data.officers||[]).forEach((v,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=v; });
   layout = data.layout || [];
   renderGrid();

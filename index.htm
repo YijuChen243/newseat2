@@ -62,6 +62,9 @@
       <h1 class="text-base font-bold">控制面板</h1>
       <div class="flex gap-2">
         <span id="userEmail" class="text-[11px] text-slate-400 self-center"></span>
+        <button id="adminBtn" class="p-1.5 hover:bg-slate-700 rounded-full transition hidden text-amber-400" title="管理者後台">
+          <i data-lucide="shield-check" class="w-4 h-4"></i>
+        </button>
         <button id="changePwdBtn" class="p-1.5 hover:bg-slate-700 rounded-full transition hidden" title="更改密碼">
           <i data-lucide="key" class="w-4 h-4"></i>
         </button>
@@ -69,6 +72,14 @@
           <i data-lucide="log-out" class="w-4 h-4"></i>
         </button>
       </div>
+    </div>
+
+    <!-- 管理者幫助模式警告橫幅 -->
+    <div id="adminEditWarning" class="hidden bg-amber-100 p-3 border-b border-amber-300 flex-col gap-2 shrink-0">
+      <div class="text-[11px] text-amber-800 font-bold leading-tight">
+        👑 管理者模式：正在幫助編輯 <br><span id="adminEditTargetEmail" class="text-amber-600 text-[13px]"></span>
+      </div>
+      <button id="exitAdminEditBtn" class="bg-amber-500 text-white py-1.5 rounded text-xs font-bold hover:bg-amber-600 transition text-center w-full shadow-sm">退出幫助模式</button>
     </div>
 
     <div class="p-4 space-y-5 pb-16">
@@ -234,11 +245,45 @@
   </div>
 </div>
 
+<!-- 管理者系統 Modal -->
+<div id="adminModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[300] p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl space-y-4 max-h-[85vh] flex flex-col">
+    <div class="flex justify-between items-center border-b pb-3">
+      <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-5 h-5 text-amber-500"></i> 管理者後台：全校班級存檔列表
+      </h3>
+      <button id="closeAdminModal" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    
+    <div class="overflow-y-auto flex-1 border rounded-lg">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-100 sticky top-0 shadow-sm z-10">
+          <tr>
+            <th class="p-3 text-slate-600 font-bold whitespace-nowrap">導師帳號</th>
+            <th class="p-3 text-slate-600 font-bold whitespace-nowrap">存檔名稱 (班級)</th>
+            <th class="p-3 text-slate-600 font-bold whitespace-nowrap">最後更新時間</th>
+            <th class="p-3 text-center text-slate-600 font-bold whitespace-nowrap">操作</th>
+          </tr>
+        </thead>
+        <tbody id="adminClassList" class="divide-y divide-slate-100">
+          <!-- JS 動態載入 -->
+        </tbody>
+      </table>
+    </div>
+    <div class="text-xs text-amber-600 font-bold bg-amber-50 p-2 rounded text-center">
+      💡 提示：點擊「載入幫助」後，您的畫面會變成該導師的排版。若您修改後按下儲存，檔案會直接覆蓋回該導師的帳號中！
+    </div>
+  </div>
+</div>
+
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, collection, onSnapshot, collectionGroup, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ===== ★★★ 重要設定：在此填入您的管理者信箱 ★★★ =====
+const ADMIN_EMAIL = "yijuchen243@gmail.com"; // <-- 請修改為您的信箱
 
 // ===== 你的 Firebase 設定 =====
 const firebaseConfig = {
@@ -253,7 +298,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ===== 常數 (擴增為 14 名幹部) =====
+// ===== 常數 =====
 const OFFICERS = ["班長","副班長","風紀","學藝","衛生(內)","衛生(外)","體育","事務","環保","輔導","實習","圖書","康樂","評分員",];
 
 // ===== 狀態 =====
@@ -263,7 +308,9 @@ let savedClasses = [];
 let editingIdx = null;
 let draggedIdx = null;
 let currentUser = null;
-let isLoginMode = true; // 新增：控制目前是登入還是註冊模式
+let isLoginMode = true; 
+let currentEditingUid = null; // 管理者模式：紀錄正在幫誰修改檔案
+let unsubscribeSnapshot = null; // 紀錄 Firebase 監聽器以便切換帳號時取消
 
 // ===== 初始化 Lucide =====
 lucide.createIcons();
@@ -289,19 +336,16 @@ function renderGrid() {
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.innerHTML = '';
   
-  // 依照欄數自動調降文字大小，避免 7 欄時太擠
   const nameFontSize = cols >= 7 ? '14px' : (cols === 6 ? '17px' : '20px');
   const noFontSize = cols >= 7 ? '12px' : '14px';
 
   layout.forEach((seat, i) => {
     const div = document.createElement('div');
     div.className = `seat border-2 border-black flex flex-col relative group ${seat.fixed ? 'bg-yellow-50' : 'bg-white'}`;
-    // 微調寬高比，讓 7 列時有更好的伸縮空間
     div.style.aspectRatio = '1/0.82';
     div.draggable = !!seat.name;
     div.dataset.idx = i;
     
-    // 全面改用 Padding Bottom (pb) 推擠法，徹底解決 html2canvas 匯出時文字下沉的誤差
     div.innerHTML = `
       <div class="h-[30%] border-b-2 border-black flex items-center justify-center bg-slate-100 font-bold text-center pb-[10px]" style="font-size:${noFontSize}">
         ${seat.no}
@@ -353,7 +397,6 @@ function renderOfficersTable() {
   OFFICERS.forEach((title, i) => {
     const val = document.getElementById(`officer_${i}`)?.value || '';
     const cell = document.createElement('div');
-    // 改用 Padding Bottom 推擠法
     cell.className = 'border-r-[3px] border-b-[3px] border-black px-1.5 pt-[2px] pb-[14px] min-h-[55px] text-center bg-white flex flex-col items-center justify-center gap-1';
     
     cell.innerHTML = `
@@ -368,10 +411,8 @@ function renderNameList() {
   const raw = document.getElementById('studentList').value;
   const lines = raw.split('\n').filter(l=>l.trim());
   el.innerHTML = lines.map(l => {
-    // 智慧拆分：不管是空白或 Excel 複製來的 Tab (跳格) 都能完美解析
     const p = l.trim().split(/\s+/);
     const str = p[0] + (p.length > 1 ? ' ' + p.slice(1).join(' ') : '');
-    // 改用 Padding Bottom 推擠法
     return `<div class="border-b border-slate-200 pt-[1px] pb-[5px] px-1 truncate text-center text-[13px] leading-tight">${str}</div>`;
   }).join('');
 }
@@ -381,16 +422,13 @@ document.getElementById('classTitle').addEventListener('input', e => {
   document.getElementById('previewTitle').textContent = e.target.value;
 });
 document.getElementById('memoInput').addEventListener('input', e => {
-  // 因為現在是純文字容器且由父層控制Padding對齊，直接抽換內文即可
   document.getElementById('memoDisplay').innerHTML = `${e.target.value || '暫無說明事項。'}`;
 });
 
-// 當正在輸入或貼上時即時更新
 document.getElementById('studentList').addEventListener('input', () => { 
   renderNameList(); 
 });
 
-// 重點優化：當滑鼠離開輸入框時，自動將 Excel 的 Tab 轉換為單一空白，保持文字區塊乾淨整齊
 document.getElementById('studentList').addEventListener('blur', (e) => {
   const raw = e.target.value;
   if (!raw) return;
@@ -398,7 +436,7 @@ document.getElementById('studentList').addEventListener('blur', (e) => {
     .filter(l => l.trim())
     .map(l => {
       const p = l.trim().split(/\s+/);
-      return p[0] + ' ' + p.slice(1).join(' '); // 強制轉換為一個半形空白
+      return p[0] + ' ' + p.slice(1).join(' ');
     })
     .join('\n');
   renderNameList();
@@ -439,6 +477,102 @@ document.getElementById('modalSave').onclick = () => {
   document.getElementById('seatModal').classList.add('hidden');
   renderGrid();
 };
+
+// ===== 管理者後台系統 =====
+document.getElementById('adminBtn').onclick = async () => {
+  document.getElementById('adminModal').classList.remove('hidden');
+  const listEl = document.getElementById('adminClassList');
+  listEl.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-bold"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>資料讀取中...</td></tr>';
+  lucide.createIcons();
+
+  try {
+    const q = collectionGroup(db, 'classes');
+    const querySnapshot = await getDocs(q);
+    const allDocs = [];
+    
+    querySnapshot.forEach((doc) => {
+      // 解析路徑取得原作者的 UID (seatapp/{teacherUid}/classes/{classId})
+      const teacherUid = doc.ref.parent.parent.id; 
+      allDocs.push({ id: doc.id, teacherUid, ...doc.data() });
+    });
+
+    // 依更新時間新到舊排序
+    allDocs.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    // 儲存於全域供載入使用
+    window.adminLoadedClasses = allDocs;
+
+    let html = '';
+    allDocs.forEach((data, index) => {
+      const dateStr = data.updatedAt ? new Date(data.updatedAt).toLocaleString('zh-TW', { hour12: false }) : '未知時間';
+      const emailStr = data.teacherEmail || '未知帳號(舊版存檔)';
+      html += `
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+          <td class="p-3 text-slate-700 font-medium">${emailStr}</td>
+          <td class="p-3 font-bold text-slate-800">${data.title}</td>
+          <td class="p-3 text-xs text-slate-400">${dateStr}</td>
+          <td class="p-3 text-center">
+            <button class="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-600 transition shadow-sm" onclick="loadAdminClass(${index})">
+              載入幫助
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    if(allDocs.length === 0) {
+      html = '<tr><td colspan="4" class="p-6 text-center text-slate-500">目前系統中尚無任何班級資料</td></tr>';
+    }
+    listEl.innerHTML = html;
+
+  } catch(e) {
+    listEl.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">讀取失敗！請確認 Firestore 的 Rules 是否已正確設定。<br><span class="text-xs text-slate-400 mt-2 block">${e.message}</span></td></tr>`;
+  }
+};
+
+document.getElementById('closeAdminModal').onclick = () => {
+  document.getElementById('adminModal').classList.add('hidden');
+};
+
+// 讓 HTML 中的 onclick 可以呼叫到這個函數
+window.loadAdminClass = (index) => {
+  const data = window.adminLoadedClasses[index];
+  if(!data) return;
+
+  // 進入管理者編輯模式：紀錄 UID 並顯示警告橫幅
+  currentEditingUid = data.teacherUid;
+  document.getElementById('adminEditWarning').classList.remove('hidden');
+  document.getElementById('adminEditWarning').classList.add('flex');
+  document.getElementById('adminEditTargetEmail').textContent = data.teacherEmail || '未知帳號';
+
+  // 將老師的資料載入畫布
+  document.getElementById('classTitle').value = data.title;
+  document.getElementById('previewTitle').textContent = data.title;
+  cols = data.cols; rows = data.rows;
+  document.getElementById('colsInput').value = cols;
+  document.getElementById('rowsInput').value = rows;
+  document.getElementById('studentList').value = data.studentListRaw || '';
+  document.getElementById('memoInput').value = data.memo || '';
+  document.getElementById('memoDisplay').innerHTML = `${data.memo || '暫無說明事項。'}`;
+  
+  (data.officers||[]).forEach((v,i) => { const el = document.getElementById(`officer_${i}`); if(el) el.value=v; });
+  layout = data.layout || [];
+  
+  renderGrid();
+  renderNameList();
+
+  // 關閉 Modal
+  document.getElementById('adminModal').classList.add('hidden');
+};
+
+document.getElementById('exitAdminEditBtn').onclick = () => {
+  if(!confirm('確定要退出幫助模式嗎？畫面將會被清空，請確保您已儲存剛剛的修改。')) return;
+  currentEditingUid = null;
+  document.getElementById('adminEditWarning').classList.add('hidden');
+  document.getElementById('adminEditWarning').classList.remove('flex');
+  document.getElementById('resetBtn').click(); // 退出時重設為預設畫面
+};
+
 
 // 更改密碼 Modal 控制
 document.getElementById('changePwdBtn').onclick = () => {
@@ -496,7 +630,8 @@ document.getElementById('shuffleBtn').onclick = () => {
 
 // ===== 重設 =====
 document.getElementById('resetBtn').onclick = () => {
-  if (!confirm('確定要重設所有欄位？')) return;
+  // 如果不是被強制點擊(有帶參數)，才詢問確認
+  if (event && event.isTrusted && !confirm('確定要重設所有欄位？')) return;
   document.getElementById('classTitle').value = '114學年度 某某班 座位表';
   document.getElementById('previewTitle').textContent = '114學年度 某某班 座位表';
   document.getElementById('studentList').value = '';
@@ -566,7 +701,6 @@ document.getElementById('exportPdfBtn').onclick = async () => {
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     
-    // 將我們已經等比例設計好的畫布，直接以 1:1 滿版貼上 A4，自帶 10mm 完美留白邊距
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
     
@@ -681,6 +815,13 @@ document.getElementById('logoutBtn').onclick = () => signOut(auth);
 // ===== Auth 狀態監聽 =====
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
+  
+  // 切換帳號前，若有舊的監聽器則先行取消，避免引發 permission-denied 錯誤
+  if (unsubscribeSnapshot) {
+    unsubscribeSnapshot();
+    unsubscribeSnapshot = null;
+  }
+
   if (user) {
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
@@ -691,23 +832,41 @@ onAuthStateChanged(auth, async (user) => {
       document.getElementById('cloudSection').classList.remove('opacity-40', 'pointer-events-none');
       document.getElementById('changePwdBtn').classList.remove('hidden'); 
       
+      // 動態顯示管理者按鈕 (比對是否為預設管理者信箱)
+      if (user.email === ADMIN_EMAIL) {
+        document.getElementById('adminBtn').classList.remove('hidden');
+      } else {
+        document.getElementById('adminBtn').classList.add('hidden');
+      }
+
       const q = collection(db, 'seatapp', user.uid, 'classes');
-      onSnapshot(q, (snap) => {
-        savedClasses = [];
-        snap.forEach(d => savedClasses.push({id: d.id, ...d.data()}));
-        const sel = document.getElementById('savedClassSelect');
-        const cur = sel.value;
-        sel.innerHTML = '<option value="">-- 選擇存檔 --</option>';
-        savedClasses.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c.id; opt.textContent = c.id;
-          sel.appendChild(opt);
-        });
-        sel.value = cur;
+      
+      // 將監聽器指派給全域變數，以便登出時可以取消訂閱
+      unsubscribeSnapshot = onSnapshot(q, (snap) => {
+        // 如果目前不是處於「管理者編輯模式」，才更新左側下拉選單
+        if (!currentEditingUid) {
+          savedClasses = [];
+          snap.forEach(d => savedClasses.push({id: d.id, ...d.data()}));
+          const sel = document.getElementById('savedClassSelect');
+          const cur = sel.value;
+          sel.innerHTML = '<option value="">-- 選擇存檔 --</option>';
+          savedClasses.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id; opt.textContent = c.id;
+            sel.appendChild(opt);
+          });
+          sel.value = cur;
+        }
+      }, (error) => {
+        console.error('Firestore 存檔讀取錯誤：', error);
+        if(error.code === 'permission-denied') {
+          console.warn('您的 Firestore 安全規則可能設定不正確，或權限不足。');
+        }
       });
     } else {
       document.getElementById('cloudSection').classList.add('opacity-40', 'pointer-events-none');
       document.getElementById('changePwdBtn').classList.add('hidden'); 
+      document.getElementById('adminBtn').classList.add('hidden');
     }
 
     initLayout();
@@ -726,18 +885,26 @@ document.getElementById('saveBtn').onclick = async () => {
   const title = document.getElementById('classTitle').value.trim();
   if (!title) return alert('請輸入班級名稱');
   const officerVals = OFFICERS.map((_,i) => document.getElementById(`officer_${i}`)?.value||'');
+  
+  // 重點！判斷要存給誰：如果處於管理者編輯模式，就覆蓋到該老師的帳號下
+  const isHelping = (currentUser.email === ADMIN_EMAIL && currentEditingUid !== null);
+  const targetUid = isHelping ? currentEditingUid : currentUser.uid;
+  const targetEmail = isHelping ? document.getElementById('adminEditTargetEmail').textContent : currentUser.email;
+
   try {
-    await setDoc(doc(db, 'seatapp', currentUser.uid, 'classes', title), {
+    await setDoc(doc(db, 'seatapp', targetUid, 'classes', title), {
       title, cols, rows,
       studentListRaw: document.getElementById('studentList').value,
       memo: document.getElementById('memoInput').value,
       officers: officerVals, layout,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      teacherEmail: targetEmail,
+      teacherUid: targetUid
     });
-    alert('儲存成功！');
+    alert('儲存成功！' + (isHelping ? '\n(檔案已成功覆蓋回該導師的帳號)' : ''));
   } catch(e) {
     console.error(e);
-    alert('儲存失敗：' + e.message + '\n\n請至 Firebase Console → Firestore → Rules 設定讀寫權限。');
+    alert('儲存失敗：' + e.message + '\n\n如果是管理者，請務必確認 Firebase Rules 已正確設定！');
   }
 };
 

@@ -17,7 +17,6 @@
 </head>
 <body class="bg-slate-100">
 
-<!-- 登入與註冊畫面 -->
 <div id="authScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-4 z-50">
   <div class="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl relative">
     <h2 class="text-2xl font-bold mb-2 text-slate-800 text-center">座位安排系統</h2>
@@ -38,13 +37,10 @@
         </div>
       </div>
       
-      <!-- 主操作按鈕 (動態切換登入/註冊) -->
       <button id="primaryAuthBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition text-sm">登入</button>
       
-      <!-- 切換模式按鈕 -->
       <button id="switchAuthModeBtn" class="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">還沒有帳號？註冊新帳號</button>
       
-      <!-- 訪客登入 -->
       <div class="text-center pt-2 border-t mt-4 border-slate-100">
         <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
       </div>
@@ -53,10 +49,8 @@
   </div>
 </div>
 
-<!-- 主應用 -->
 <div id="mainApp" class="hidden flex h-screen overflow-hidden">
 
-  <!-- 側邊欄 -->
   <aside class="no-print w-[320px] min-w-[320px] bg-white border-r shadow-lg overflow-y-auto flex flex-col z-10">
     <div class="p-4 bg-slate-800 text-white flex justify-between items-center sticky top-0 z-20">
       <h1 class="text-base font-bold">控制面板</h1>
@@ -74,7 +68,6 @@
       </div>
     </div>
 
-    <!-- 管理者幫助模式警告橫幅 -->
     <div id="adminEditWarning" class="hidden bg-amber-100 p-3 border-b border-amber-300 flex-col gap-2 shrink-0">
       <div class="text-[11px] text-amber-800 font-bold leading-tight">
         👑 管理者模式：正在幫助編輯 <br><span id="adminEditTargetEmail" class="text-amber-600 text-[13px]"></span>
@@ -84,7 +77,6 @@
 
     <div class="p-4 space-y-5 pb-16">
 
-      <!-- 雲端存檔 -->
       <div class="bg-slate-50 p-3 rounded-xl border space-y-2" id="cloudSection">
         <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">☁ 雲端存檔</h3>
         <select id="savedClassSelect" class="w-full p-2 border rounded text-xs bg-white">
@@ -101,7 +93,6 @@
         </div>
       </div>
 
-      <!-- 班級設定 -->
       <div class="space-y-3">
         <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider border-b pb-1">班級設定</h3>
         <input id="classTitle" type="text" value="114學年度第1學期 資二甲 座位表" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none"/>
@@ -122,19 +113,16 @@
         </button>
       </div>
 
-      <!-- 幹部 (擴充為 14 個) -->
       <div class="space-y-2">
         <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">幹部資料</h3>
         <div id="officersGrid" class="grid grid-cols-2 gap-2"></div>
       </div>
 
-      <!-- 備註 -->
       <div class="space-y-1">
         <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">導師備註</h3>
         <textarea id="memoInput" rows="4" class="w-full p-2 border rounded text-xs" placeholder="說明事項..."></textarea>
       </div>
 
-      <!-- 操作按鈕 -->
       <div class="space-y-2 pt-1">
         <button id="exportBtn" class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-sky-600 transition shadow-sm text-sm">
           <i data-lucide="camera" class="w-4 h-4"></i>匯出圖片 (PNG)
@@ -149,31 +137,23 @@
     </div>
   </aside>
 
-  <!-- 預覽區 -->
   <main class="flex-1 overflow-auto bg-slate-500 p-6 flex justify-center items-start">
-    <!-- 完美 A4 比例容器 -->
     <div id="captureArea" class="w-[794px] h-[1123px] shrink-0 bg-white shadow-2xl p-[38px] flex flex-col text-black mx-auto overflow-hidden relative">
 
-      <!-- 標題 -->
       <h1 id="previewTitle" class="text-center text-3xl font-black pb-3 mb-6 border-b-[3px] border-black tracking-[0.2em] shrink-0">114學年度第1學期 資二甲 座位表</h1>
 
-      <!-- 下方主內容區 -->
       <div class="flex gap-4 flex-1 min-h-0">
         
-        <!-- 左側：排版區 -->
         <div class="flex-1 flex flex-col gap-3 min-w-0">
           
-          <!-- 座位格 -->
           <div id="seatGrid" class="grid gap-2 shrink-0"></div>
 
-          <!-- 講桌 -->
           <div class="flex justify-center mb-2 shrink-0">
             <div class="w-56 h-12 border-[3px] border-black flex items-center justify-center font-bold text-xl bg-slate-50 pb-[10px]">
               講　桌  👨‍🏫
             </div>
           </div>
 
-          <!-- 幹部表 -->
           <div class="mt-auto shrink-0 flex flex-col">
             <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest border-[3px] border-b-0 border-black">
               幹部名單
@@ -181,7 +161,6 @@
             <div id="officersTable" class="grid grid-cols-7 border-t-[3px] border-l-[3px] border-black"></div>
           </div>
 
-          <!-- 備註區 -->
           <div class="mt-2 shrink-0 flex flex-col">
             <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest border-[3px] border-b-0 border-black">
               備註說明區
@@ -192,7 +171,6 @@
           </div>
         </div>
 
-        <!-- 右側：名單 -->
         <div class="w-[105px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
           <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest shrink-0">
             座號名單
@@ -201,7 +179,6 @@
         </div>
       </div>
 
-      <!-- 版權聲明 -->
       <div class="text-center text-[12px] text-gray-400 font-bold mt-4 shrink-0 tracking-widest">
         設計者By Chen Yiju & AI
       </div>
@@ -209,7 +186,6 @@
   </main>
 </div>
 
-<!-- 座位編輯 Modal -->
 <div id="seatModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4">
   <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs space-y-4">
     <h3 class="font-bold border-b pb-2 flex justify-between text-slate-800">編輯座位 <span id="modalSeatNum" class="text-slate-400">#1</span></h3>
@@ -232,7 +208,6 @@
   </div>
 </div>
 
-<!-- 更改密碼 Modal -->
 <div id="pwdModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4">
   <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs space-y-4">
     <h3 class="font-bold border-b pb-2 text-slate-800">更改密碼</h3>
@@ -248,7 +223,6 @@
   </div>
 </div>
 
-<!-- 管理者系統 Modal -->
 <div id="adminModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[300] p-4">
   <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl space-y-4 max-h-[85vh] flex flex-col">
     <div class="flex justify-between items-center border-b pb-3">
@@ -269,8 +243,7 @@
           </tr>
         </thead>
         <tbody id="adminClassList" class="divide-y divide-slate-100">
-          <!-- JS 動態載入 -->
-        </tbody>
+          </tbody>
       </table>
     </div>
     <div class="text-xs text-amber-600 font-bold bg-amber-50 p-2 rounded text-center">
@@ -279,7 +252,6 @@
   </div>
 </div>
 
-<!-- Firebase SDKs (修正匯入 deleteDoc 模組) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -612,25 +584,39 @@ document.getElementById('shuffleBtn').onclick = () => {
       const p = l.trim().split(/\s+/);
       return {no: p[0]||'', name: p.slice(1).join(' ')||''};
     }).sort(() => Math.random()-0.5);
-  let si = 0;
+    
+  // 清空所有非固定的座位
   layout.forEach((seat, i) => {
     if (!seat.fixed) {
-      if (si < students.length) {
-        layout[i] = {...seat, no: students[si].no, name: students[si].name};
-        si++;
-      } else {
-        layout[i] = {...seat, no:'', name:''};
-      }
+      layout[i] = {...seat, no:'', name:''};
     }
   });
+
+  // 產生由下到上，由左至右的索引順序
+  let orderedIndices = [];
+  for (let r = rows - 1; r >= 0; r--) {
+    for (let c = 0; c < cols; c++) {
+      orderedIndices.push(r * cols + c);
+    }
+  }
+
+  // 依照新順序將學生填入
+  let si = 0;
+  for (let idx of orderedIndices) {
+    if (!layout[idx].fixed && si < students.length) {
+      layout[idx] = {...layout[idx], no: students[si].no, name: students[si].name};
+      si++;
+    }
+  }
+  
   renderGrid();
 };
 
 // ===== 獨立的重設與清理畫面功能 =====
 function resetApp(force = false) {
   if (!force && !confirm('確定要重設所有欄位？')) return;
-  document.getElementById('classTitle').value = '114學年度 某某班 座位表';
-  document.getElementById('previewTitle').textContent = '114學年度 某某班 座位表';
+  document.getElementById('classTitle').value = '114學年度第1學期 某某班 座位表';
+  document.getElementById('previewTitle').textContent = '114學年度第1學期 某某班 座位表';
   document.getElementById('studentList').value = '';
   document.getElementById('memoInput').value = '';
   document.getElementById('memoDisplay').innerHTML = `暫無說明事項。`;

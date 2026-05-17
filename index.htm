@@ -142,7 +142,7 @@
 
       <h1 id="previewTitle" class="text-center text-3xl font-black pb-3 mb-6 border-b-[3px] border-black tracking-[0.2em] shrink-0">114學年度第1學期 資二甲 座位表</h1>
 
-      <div class="flex gap-4 flex-1 min-h-0">
+      <div class="flex gap-2 flex-1 min-h-0">
         
         <div class="flex-1 flex flex-col gap-3 min-w-0">
           
@@ -171,7 +171,7 @@
           </div>
         </div>
 
-        <div class="w-[105px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
+        <div id="nameListPanel" class="w-[90px] min-w-[72px] border-[3px] border-black flex flex-col self-stretch bg-white overflow-hidden shrink-0">
           <div class="bg-black text-white text-center pt-[2px] pb-[10px] font-bold text-[13px] tracking-widest shrink-0">
             座號名單
           </div>
@@ -383,12 +383,22 @@ function renderOfficersTable() {
 
 function renderNameList() {
   const el = document.getElementById('nameList');
+  const panel = document.getElementById('nameListPanel');
   const raw = document.getElementById('studentList').value;
   const lines = raw.split('\n').filter(l=>l.trim());
+  
+  // 根據欄數動態調整名單欄寬與字體大小，避免被座位格遮蓋
+  const panelWidth = cols >= 6 ? 80 : (cols === 5 ? 90 : 105);
+  const fontSize = cols >= 6 ? 11 : (cols === 5 ? 12 : 13);
+  if (panel) {
+    panel.style.width = panelWidth + 'px';
+    panel.style.minWidth = panelWidth + 'px';
+  }
+  
   el.innerHTML = lines.map(l => {
     const p = l.trim().split(/\s+/);
     const str = p[0] + (p.length > 1 ? ' ' + p.slice(1).join(' ') : '');
-    return `<div class="border-b border-slate-200 pt-[1px] pb-[5px] px-1 truncate text-center text-[13px] leading-tight">${str}</div>`;
+    return `<div class="border-b border-slate-200 pt-[1px] pb-[3px] px-1 truncate text-center leading-tight" style="font-size:${fontSize}px">${str}</div>`;
   }).join('');
 }
 

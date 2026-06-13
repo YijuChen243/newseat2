@@ -40,10 +40,7 @@
       <button id="primaryAuthBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition text-sm">登入</button>
       
       <button id="switchAuthModeBtn" class="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">還沒有帳號？註冊新帳號</button>
-      
-      <div class="text-center pt-2 border-t mt-4 border-slate-100">
-        <button id="anonBtn" class="w-full text-slate-400 py-2 rounded-lg text-xs hover:text-slate-600 transition">不登入，直接使用（資料不儲存）</button>
-      </div>
+           
     </div>
    <p id="authError" class="text-xs mt-3 text-center hidden whitespace-pre-wrap"></p>
     <details class="mt-4 pt-3 border-t border-slate-100">
@@ -822,10 +819,7 @@ document.getElementById('primaryAuthBtn').onclick = async () => {
   }
 };
 
-document.getElementById('anonBtn').onclick = async () => {
-  try { await signInAnonymously(auth); }
-  catch(e) { showMessage('進入失敗：' + e.message, true); }
-};
+
 
 document.getElementById('logoutBtn').onclick = () => {
   if (unsubscribeSnapshot) {
